@@ -17,7 +17,7 @@
 </head>
 <body>
 <script type="module">
-    // CDA modified Gem Shadow v2.7a
+    // CDA modified Gem Shadow v2.7aGIT
     // TODO: BUGFIX If subProg=2 & Height/Amp>0 & ripFreq=0 and freeze rip=false entire floor bobs up and down.
     import * as THREE from 'three';
     import { OrbitControls } from 'OrbitControls';
@@ -764,7 +764,10 @@
     // Using a known CORS-friendly space HDR from Poly Haven
     // rgbeLoader.load('https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/starmap_2020_1k.hdr', (hdr) => {
     // rgbeLoader.load('https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/starmap_2020_1k.hdr', (hdr) => {
-    rgbeLoader.load('HDR_asteroid_field.hdr',  (hdr) => {
+    // rgbeLoader.load('HDR_asteroid_field.hdr',  (hdr) => {
+	// fix for git
+	
+	rgbeLoader.load('https://drive.google.com/file/d/1k4NwrOcPJrZIai7U1FKLTC1vNxnWXN9y/view?usp=drive_link',  (hdr) => {
     hdr.mapping = THREE.EquirectangularReflectionMapping;
     
     scene.background = hdr;
