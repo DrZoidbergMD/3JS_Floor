@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <style> body { margin: 0; overflow: hidden; } </style>
+    <script type="importmap">
+      {
+      "imports": { 
+        "three":"https://unpkg.com/three@0.160.0/build/three.module.js",
+        "OrbitControls": "https://unpkg.com/three@0.160.0/examples/jsm/controls/OrbitControls.js", 
+        "lil-gui": "https://unpkg.com/lil-gui@0.19.1/dist/lil-gui.esm.min.js",
+        "jsm/": "https://cdn.jsdelivr.net/npm/three@0.167/examples/jsm/",
+        "EXRLoader": "https://unpkg.com/three@0.160.0/examples/jsm/loaders/EXRLoader.js",
+        "RGBELoader": "https://unpkg.com/three@0.160.0/examples/jsm/loaders/RGBELoader.js"
+       }
+      }
+    </script>
+</head>
+<body>
+<script type="module">
+    // CDA modified Gem Shadow v2.7a
+    // TODO: BUGFIX If subProg=2 & Height/Amp>0 & ripFreq=0 and freeze rip=false entire floor bobs up and down.
+    import * as THREE from 'three';
+    import { OrbitControls } from 'OrbitControls';
+    import GUI from 'lil-gui';
+    import { UltraHDRLoader } from 'jsm/loaders/UltraHDRLoader.js';
+    import { EXRLoader } from 'EXRLoader';
+    import { RGBELoader } from 'RGBELoader';
+    
+	// ... imports ...
+
+    // --- HELPER: Fresnel Glow Shader (Inline) ---
+    function getFresnelMat({rimHex = 0x0088ff, facingHex = 0x000000} = {}) {
+      const uniforms = {
+        color1: { value: new THREE.Color(rimHex) },
+        color2: { value: new THREE.Color(facingHex) },
+        fresnelBias: { value: 0.1 },
+        fresnelScale: { value: 1.0 },
+        fresnelPower: { value: 4.0 },
+      };
+      const vs = `
+      uniform float fresnelBias;
+      uniform float fresnelScale;
+      uniform float fresnelPower;
+      varying float vReflectionFactor;
+      void main() {
+        vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+        vec4 worldPosition = modelMatrix * vec4( position, 1.0 );
+        vec3 worldNormal = normalize( mat3( modelMatrix[0].xyz, modelMatrix[1].xyz, modelMatrix[2].xyz ) * normal );
+        vec3 I = worldPosition.xyz - cameraPosition;
+        vReflectionFactor = fresnelBias + fresnelScale * pow( 1.0 + dot( normalize( I ), worldNormal ), fresnelPower );
+        gl_Position = projectionMatrix * mvPosition;
+      }
+      `;
+      const fs = `
+      uniform vec3 color1;
+      uniform vec3 color2;
+      varying float vReflectionFactor;
+      void main() {
+        float f = clamp( vReflectionFactor, 0.0, 1.0 );
+        gl_FragColor = vec4(mix(color2, color1, vec3(f)), f);
+      }
+      `;
+      const fresnelMat = new THREE.ShaderMaterial({
+        uniforms: uniforms,
+        vertexShader: vs,
+        fragmentShader: fs,
+        transparent: true,
+        blending: THREE.AdditiveBlending,
+      });
+      return fresnelMat;
+    }
+	
+	// --- HELPER: getStarfield (Inline) ---
+	function getStarfield({ numStars = 500 } = {}) {
+      function randomSpherePoint() {
+      // const radius = Math.random() * 25 + 25;
+	  const radius = Math.random() * 750 + 750; // CDA spread them out
+      const u = Math.random();
+      const v = Math.random();
+      const theta = 2 * Math.PI * u;
+      const phi = Math.acos(2 * v - 1);
+      let x = radius * Math.sin(phi) * Math.cos(theta);
+      let y = radius * Math.sin(phi) * Math.sin(theta);
+      let z = radius * Math.cos(phi);
+
+      return {
+        pos: new THREE.Vector3(x, y, z - 800), // CDA to put stars behind globe 
+        hue: 0.6,
+        minDist: radius, 
+      };
+    }
+      const verts = [];
+      const colors = [];
+      const positions = [];
+      let col;
+      for (let i = 0; i < numStars; i += 1) {
+        let p = randomSpherePoint();
+        const { pos, hue } = p;
+        positions.push(p);
+        col = new THREE.Color().setHSL(hue, 0.2, Math.random());
+        verts.push(pos.x, pos.y, pos.z);
+        colors.push(col.r, col.g, col.b);
+      }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute("position", new THREE.Float32BufferAttribute(verts, 3));
+      geo.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+      const mat = new THREE.PointsMaterial({
+        size: 2.2,
+        vertexColors: true,
+        map: new THREE.TextureLoader().load("./threejs-earth/textures/stars/circle.png"),
+      });
+      const points = new THREE.Points(geo, mat);
+      return points;
+    }
+	
+    // 1. SCENE SETUP
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x880000);
+    
+    const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 2000);
+    camera.position.set(-5, 7, 17);
+    camera.lookAt(0, 0, 0);
+    
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMap.enabled = true; 
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap; 
+    document.body.appendChild(renderer.domElement);
+
+    const controls = new OrbitControls( camera, renderer.domElement );
+    const gui = new GUI(); 
+    
+    // --- GUI OBJECT ---
+    const guiObj = {
+        subProg: 3,         // 1=Flat, 2=Ripple, 3=Landscape
+        flySpeed: 0.5,
+        ripSize: 3.0,
+        ripFreq: 3.0,
+        myBoolean: false,   // Freeze Rip
+        colorMode: 0,       // 0 = B&W, 1 = Color (Algorithmic), 2=Random
+        hueSpeed: 0.5,      // Speed of color rotation
+        gridDensity: 10.0,  // How many squares
+        freezeSpot: true,
+        colRot: false,
+        // Fade animation 
+        animMode: 0,         // 0=Static, 1=Fade Up, 2=Fade Down, 3=Pulse
+        fadeTime: 10.0,      // Seconds for a full loop
+        randomizeColors: function() {
+            // Light Squares: Range 56 to 255
+            // (Math.random() * 199) + 56 ensures we fall in that range
+            const r1 = ((Math.random() * 199) + 56) / 255; 
+            const g1 = ((Math.random() * 199) + 56) / 255; 
+            const b1 = ((Math.random() * 199) + 56) / 255;
+            // Dark Squares: Range 0 to 55
+            // (Math.random() * 55) ensures we fall in the low range
+            const r2 = (Math.random() * 55) / 255; 
+            const g2 = (Math.random() * 55) / 255; 
+            const b2 = (Math.random() * 55) / 255;
+            // Update the uniforms
+            customUniforms.uRandCol1.value.setRGB(r1, g1, b1);
+            customUniforms.uRandCol2.value.setRGB(r2, g2, b2);
+        }
+    };
+
+    const myPrgCntlr = gui.add( guiObj, 'subProg', 1, 3, 1 ).name('Prog (1-3)').listen();
+    myPrgCntlr.onChange(value => {
+      if (value === 3) {     // landscape
+          myFSCntlr.setValue(0.5).show();
+          myHACntlr.setValue(1.5).show();
+          myRFCntlr.hide();
+          myRipCntlr.hide();
+      } else {    
+          myHACntlr.show();
+          myFSCntlr.hide();
+          if (value === 2) {   // ripple
+              myRFCntlr.setValue(3.0).show();
+              myHACntlr.setValue(3.0);
+              myRipCntlr.show();              
+          } else {             // flat
+              myHACntlr.hide();
+              myRFCntlr.hide();
+              myRipCntlr.hide();
+          }
+      }
+    });
+    
+    const myFSCntlr = gui.add( guiObj, 'flySpeed', 0.0, 5.0, 0.1 ).name('Flight Speed');
+    const myHACntlr = gui.add( guiObj, 'ripSize', 0.0, 5.0, 0.5 ).name('Height/Amp');
+    const myRFCntlr = gui.add( guiObj, 'ripFreq', 0.0, 10.0, 0.5 ).name('Ripple Freq');
+    
+    // New Fragment Controls
+    const fFolder = gui.addFolder('Shader Colors');
+    
+    const myCMCntlr = fFolder.add( guiObj, 'colorMode', 0, 2, 1 ).name('Mode (0=BW 1=Col 2=Rnd)').listen();
+    myCMCntlr.onChange(value => {
+      if (value === 2) {      // 2 = random
+        myRPCntlr.show();
+        myRotCntlr.hide();
+        myHUCntlr.hide();
+        myAMCntlr.show();
+        myFTCntrl.show();
+      } else {    
+        myRPCntlr.hide();
+        if (value === 1) {    // 1 = colour
+          myRotCntlr.show();
+          myHUCntlr.show();
+          myAMCntlr.show();
+          myFTCntrl.show();
+        } else {              // 0 = B&W
+          myRotCntlr.hide();
+          myHUCntlr.hide();
+          myAMCntlr.hide();
+          myFTCntrl.hide();
+        }
+      }
+    });
+    // Dropdown for Animation
+    const myAMCntlr = fFolder.add(guiObj, 'animMode', { 
+       'Static (Full Color)': 0, 
+       'Fade Up (BW->Col)': 1, 
+       'Fade Down (Col->BW)': 2, 
+       'Pulse (BW->Col->BW)': 3 
+    }).name('Anim Mode');
+    const myFTCntrl = fFolder.add(guiObj, 'fadeTime', 1.0, 20.0,1.0).name('Loop Time (s)');
+    
+    const myRPCntlr = fFolder.add( guiObj, 'randomizeColors').name('Randomize Palette'); // NEW BUTTON
+    
+    const myRotCntlr = fFolder.add( guiObj, 'colRot').name('Rot Colors').listen();
+    myRotCntlr.onChange(value => {
+      myRotCntlr.name(value ? 'Freeze Colors' : ' Rot Colors');
+    });
+    
+    const myHUCntlr = fFolder.add( guiObj, 'hueSpeed', 0.0, 2.0, 0.1 ).name('Hue Rot Speed');
+    
+    const myRipCntlr = gui.add( guiObj, 'myBoolean').name('Freeze Rip').listen();
+    myRipCntlr.onChange(value => {
+      myRipCntlr.name(value ? 'Move Rip' : 'Freeze Rip');
+    });
+    
+    const mySpotCntlr = gui.add( guiObj, 'freezeSpot').name('Freeze Spot').listen();
+    mySpotCntlr.onChange(value => {
+      mySpotCntlr.name(value ? 'Move Spot' : 'Freeze Spot');
+    });
+    
+    gui.add( guiObj, 'gridDensity', 5.0, 30.0, 5.0 ).name('Grid Density');
+    // Trigger the logic to set initial visibility states
+    myPrgCntlr.setValue(1);
+    //myPrgCntlr.setValue(guiObj.subProg);
+    
+    // --- 1. VERTEX SHADER GLSL (Geometry) ---
+    let vertexPars, vertexMain, fragmentPars, fragmentMain;
+    {
+    vertexPars = `
+      varying vec2 vUv2; // Pass UV to fragment
+      uniform float uTime;
+      uniform float uProg;
+      uniform vec2 uFly;
+      uniform float uRipSize;
+      uniform float uRipFreq;
+      uniform bool uFreezeRip;
+
+      // Classic Perlin 3D Noise by Stefan Gustavson noise functions
+      vec4 permute(vec4 x) { return mod(((x*34.0)+1.0)*x, 289.0); }
+      vec4 taylorInvSqrt(vec4 r) { return 1.79284291400159 - 0.85373472095314 * r; }
+      vec3 fade(vec3 t) { return t*t*t*(t*(t*6.0-15.0)+10.0); }
+
+      float cnoise(vec3 P) {
+        vec3 Pi0 = floor(P); vec3 Pi1 = Pi0 + vec3(1.0);
+        Pi0 = mod(Pi0, 289.0); Pi1 = mod(Pi1, 289.0);
+        vec3 Pf0 = fract(P); vec3 Pf1 = Pf0 - vec3(1.0);
+        vec4 ix = vec4(Pi0.x, Pi1.x, Pi0.x, Pi1.x);
+        vec4 iy = vec4(Pi0.yy, Pi1.yy);
+        vec4 iz0 = Pi0.zzzz; vec4 iz1 = Pi1.zzzz;
+        vec4 ixy = permute(permute(ix) + iy);
+        vec4 ixy0 = permute(ixy + iz0);
+        vec4 ixy1 = permute(ixy + iz1);
+        vec4 gx0 = ixy0 / 7.0;
+        vec4 gy0 = fract(floor(gx0) / 7.0) - 0.5;
+        gx0 = fract(gx0);
+        vec4 gz0 = vec4(0.5) - abs(gx0) - abs(gy0);
+        vec4 sz0 = step(gz0, vec4(0.0));
+        gx0 -= sz0 * (step(0.0, gx0) - 0.5);
+        gy0 -= sz0 * (step(0.0, gy0) - 0.5);
+        vec4 gx1 = ixy1 / 7.0;
+        vec4 gy1 = fract(floor(gx1) / 7.0) - 0.5;
+        gx1 = fract(gx1);
+        vec4 gz1 = vec4(0.5) - abs(gx1) - abs(gy1);
+        vec4 sz1 = step(gz1, vec4(0.0));
+        gx1 -= sz1 * (step(0.0, gx1) - 0.5);
+        gy1 -= sz1 * (step(0.0, gy1) - 0.5);
+        vec3 g000 = vec3(gx0.x,gy0.x,gz0.x);
+        vec3 g100 = vec3(gx0.y,gy0.y,gz0.y);
+        vec3 g010 = vec3(gx0.z,gy0.z,gz0.z);
+        vec3 g110 = vec3(gx0.w,gy0.w,gz0.w);
+        vec3 g001 = vec3(gx1.x,gy1.x,gz1.x);
+        vec3 g101 = vec3(gx1.y,gy1.y,gz1.y);
+        vec3 g011 = vec3(gx1.z,gy1.z,gz1.z);
+        vec3 g111 = vec3(gx1.w,gy1.w,gz1.w);
+        vec4 norm0 = taylorInvSqrt(vec4(dot(g000, g000), dot(g010, g010), dot(g100, g100), dot(g110, g110)));
+        g000 *= norm0.x; g010 *= norm0.y; g100 *= norm0.z; g110 *= norm0.w;
+        vec4 norm1 = taylorInvSqrt(vec4(dot(g001, g001), dot(g011, g011), dot(g101, g101), dot(g111, g111)));
+        g001 *= norm1.x; g011 *= norm1.y; g101 *= norm1.z; g111 *= norm1.w;
+        float n000 = dot(g000, Pf0);
+        float n100 = dot(g100, vec3(Pf1.x, Pf0.yz));
+        float n010 = dot(g010, vec3(Pf0.x, Pf1.y, Pf0.z));
+        float n110 = dot(g110, vec3(Pf1.xy, Pf0.z));
+        float n001 = dot(g001, vec3(Pf0.xy, Pf1.z));
+        float n101 = dot(g101, vec3(Pf1.x, Pf0.y, Pf1.z));
+        float n011 = dot(g011, vec3(Pf0.x, Pf1.yz));
+        float n111 = dot(g111, Pf1);
+        vec3 fade_xyz = fade(Pf0);
+        vec4 n_z = mix(vec4(n000, n100, n010, n110), vec4(n001, n101, n011, n111), fade_xyz.z);
+        vec2 n_yz = mix(n_z.xy, n_z.zw, fade_xyz.y);
+        float n_xyz = mix(n_yz.x, n_yz.y, fade_xyz.x); 
+        return 2.2 * n_xyz;
+      }
+      // End of Perlin Noise Code
+  
+      // Fractal Brownian Motion FBM
+
+      float fbm(vec3 P) {
+        float total = 0.0; float amplitude = 1.0; float frequency = 1.0;
+        // for (int i = 0; i < OCTAVES; ++i) {
+        for (int i = 0; i < 4; ++i) {
+          total += cnoise(P * frequency) * amplitude;
+          // Frequency incs (smaller features)
+          // frequency *= LACUNARITY; 
+          frequency *= 2.0; 
+          // Amp decreases (less influence)
+          amplitude *= 0.5;
+        }
+        return total;
+      }
+    `;
+
+    vertexMain = `
+        vUv2 = uv; // Capture original UVs
+        float height = 0.0;
+        
+        if (uProg == 2.0) { // RIPPLE
+            float dist = length(position.xy);
+            // If Frequency is 0, sin(0 - time) causes the whole floor to bob.
+            // We force height to 0.0 if frequency is near zero.
+            if (uRipFreq < 0.01) {
+                height = 0.0;
+            } 
+            else if (uFreezeRip==true) {
+              height = sin(dist * uRipFreq - 1.0 * 3.0) * uRipSize * 0.2;
+            } else {
+              height = sin(dist * uRipFreq - uTime * 3.0) * uRipSize * 0.2;
+            }
+        } 
+        else if (uProg == 3.0) { // LANDSCAPE
+            // We use uFly (the accumulating offset) instead of uTime for movement
+            // uFly is updated in Javascript
+            vec3 noisePos = (position * 0.35); 
+            noisePos.x -= uFly.x; 
+            noisePos.y += uFly.y; 
+            height = fbm(noisePos) * uRipSize;
+        }
+        // Apply result to "transformed" (Three.js standard vertex position)
+        transformed += normal * height;
+    `;
+
+    // --- 2. FRAGMENT SHADER GLSL (Pattern & Color) ---
+    // Ported from grid.frag v1.4
+    fragmentPars = `
+      varying vec2 vUv2;
+      uniform float uGridDensity;
+      // Controls
+      uniform float uMixVal;      // 0.0 = BW, 1.0 = Color (Calculated in JS)
+
+      // Color Data
+      uniform float uCurrentHue;
+      uniform float uMirrorHue;
+      uniform int uColorMode;     // 0=BW 1=Col 2=Random
+      
+      // NEW UNIFORMS FOR RANDOM COLORS
+      uniform vec3 uRandCol1;
+      uniform vec3 uRandCol2;
+
+      float checker(in vec2 p){
+        vec2 q = floor(p);
+        return mod(q.x+q.y, 2.0);
+      }
+
+      float remap(float value, float min1, float max1, float min2, float max2) {
+        return min2 + (value - min1) * (max2 - min2) / (max1-min1);
+      }
+
+      vec3 hsbToRgb(vec3 hsb) {
+        vec3 hsv = vec3(hsb.x / 360.0, hsb.y / 100.0, hsb.z / 100.0);
+        vec3 c = vec3(1.0);
+        // Optimized GLSL HSB to RGB
+        vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+        vec3 p = abs(fract(hsv.xxx + K.xyz) * 6.0 - K.www);
+        c = hsv.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), hsv.y);
+        return c;
+      }
+
+      // ----------------------------------------------------
+      // YOUR NEW FUNCTION
+      // Takes the checker value (0 or 1) and returns a mixed color
+      // ----------------------------------------------------
+      vec3 newFloor(float checkVal) {
+          // Mix between RandomColor2 (Background) and RandomColor1 (Foreground)
+          // checkVal is either 0.0 or 1.0, so it picks one or the other.
+          return mix(uRandCol2, uRandCol1, checkVal);
+      }
+
+      // The core color logic from your p5 shader
+      // CDA Fixed Gemini suggested code
+      // B&W tiles meant to be furthest from viewer, (minor pt. top left square was black in p5 its now white)
+      // CDA First 30% fades from B&W to Blue and Yellow
+      // CDA Next 70% from Blue and Yellow through 180degs so that Blue becomes Yellow and Yellow becomes Blue
+      // CDA at the bottom of the floor. Its working perfectly now.
+      
+      vec3 cbCol(vec3 col, vec2 uv) {
+         vec3 tHSB = vec3(0.,100.,100.);
+         // Logic mapped from grid.frag
+//         if (uv.y < 2. && uv.y > 1.4) {         // like from 0.7 to 1.0 ie bottom 0.3 of plane }
+         if (uv.y < 0.6 && uv.y > 0.0) {          // like from 0.0 to 0.3 ie top    0.3 of plane
+           // Top 1/3rd logic
+           if (col.r > 0.5) { // White tile
+//              col -= vec3(0.,0.,1.-remap(uv.y,2.,1.4,1.,0.));
+              col -= vec3(0.,0.,1.-remap(uv.y,0.,0.6,1.,0.)); // when y=0 remove no blue from white 
+              // when y=0.6 remove all blue to make yellow. 
+           } else { // Black tile
+//              col += vec3(0.,0.,1.-remap(uv.y,2.,1.4,1.,0.));
+              col += vec3(0.,0.,1.-remap(uv.y,0.,0.6,1.,0.)); // when y=0 add no blue to leave black 
+              // when y=0.6 add all blue
+           }
+         } else {
+           // Bottom 2/3rds logic (uv.y > 0.6)
+           if (col.r > 0.5) { // White tile -> Yellow/Red fade
+              tHSB.x = uMirrorHue; // was uCurrentHue; possibly as top left is black in p5 BUT white here
+//            tHSB.x += remap(uv.y,0.,2.8,0.,360.);   // like from 0.0 to 0.7 doubled twice
+
+              // subtract hue to match p5 colour range
+              tHSB.x -= remap(uv.y,0.6,3.4,0.,360.);    // like from 0.3 to 1.0 doubled is 0.6 to 2.0 range 1.4
+              // doubled is range 2.8 plus 0.6 = 3.4 
+              
+              tHSB.x = mod(tHSB.x ,360.);
+              col = hsbToRgb(tHSB);
+           } else { // Black tile -> Blue/Mirror fade
+              tHSB.x = uCurrentHue; 
+//              tHSB.x += remap(uv.y,0.,2.8,0.,360.);   // like from 0.0 to 0.7 doubled twice
+              tHSB.x -= remap(uv.y,0.6,3.4,0.,360.);    // like from 0.3 to 1.0 reversed doubled twice ?
+              tHSB.x = mod(tHSB.x,360.);              
+              col = hsbToRgb(tHSB);
+           } 
+         } 
+         return col;
+      }
+    `;
+
+    fragmentMain = `
+      // 1. Calculate UV scaling (mimicking p5 logic)
+      // p5 shader used: vec2 uv = (vTexCoord.xy*-2.0)+2.;
+      vec2 p5uv = (vUv2 * -2.0) + 2.0;
+
+      // 2a. Calculate Checkerboard (Returns 0.0 or 1.0)
+      float check = checker(p5uv * uGridDensity);
+      // 2b. Always calculate the B&W Base (This is our "zero" state)
+      vec3 bwColor = vec3(check);
+      
+      // 3a. Calculate the Target Color (This is our "one" state)
+      vec3 targetColor = bwColor; 
+      // 3b. Apply Color Logic if Mode is 1
+      if (uColorMode == 1) {
+         // Standard Fading Logic 
+         // cda main colorSource diff
+         targetColor = cbCol(targetColor, p5uv); // was baseColor
+         // We pass a copy of bwColor because cbCol modifies it
+         // targetColor = cbCol(vec3(check), p5uv); // colorSource code
+      }
+      else if (uColorMode == 2) {
+         // New Random Logic (using Uniforms)
+         targetColor = newFloor(check); // was baseColor
+      }
+
+      // 4. The Magic Mix
+      // JS tells us exactly how much color to show
+      vec3 finalColor = mix(bwColor, targetColor, uMixVal);
+      // 5. Inject into Three.js Diffuse Color
+      // This overrides the standard material color
+      diffuseColor.rgb = finalColor;
+    `;
+    }
+    // --- MATERIAL SETUP ---
+    const geoFlr = new THREE.PlaneGeometry(20, 20, 150, 150); 
+    
+    // We don't need a texture map anymore! GPU generates it.
+    const matFlr = new THREE.MeshStandardMaterial({ 
+        roughness: 0.4,
+        metalness: 0.1,
+        side: THREE.DoubleSide,
+        color: 0xffffff // Base white, will be overridden by shader
+    });
+
+    const depthMatFlr = new THREE.MeshDepthMaterial({
+        depthPacking: THREE.RGBADepthPacking
+    });
+
+    // Uniforms 
+    const customUniforms = {
+      uTime:    { value: 0 },
+      uProg:    { value: 2.0 },
+      uFly:     { value: new THREE.Vector2(0, 0) }, 
+      uRipSize: { value: 3.0 },
+      uRipFreq: { value: 3.0 },
+      uFreezeRip: { value: false },
+      // New Fragment Uniforms
+      uCurrentHue: { value: 240.0 }, // Blue start
+      uMirrorHue:  { value: 60.0 },  // Yellow start
+      uGridDensity: { value: 5.0 },
+      uColorMode: { value: 1 },       // 1 = Color
+      // Initialize random colors
+      uRandCol1: { value: new THREE.Color(1, 0, 1) }, // Magenta
+      uRandCol2: { value: new THREE.Color(0, 1, 0) },  // Green
+      uMixVal: { value: 1.0 } // Start visible
+    };
+    
+    // --- SHADER INJECTION FUNCTION ---
+    const modifyShader = (shader, isFragment = false) => {
+        // Link uniforms
+        shader.uniforms.uTime = customUniforms.uTime;
+        shader.uniforms.uProg = customUniforms.uProg;
+        shader.uniforms.uFly  = customUniforms.uFly;
+        shader.uniforms.uRipSize = customUniforms.uRipSize;
+        shader.uniforms.uRipFreq = customUniforms.uRipFreq;
+        shader.uniforms.uFreezeRip = customUniforms.uFreezeRip;
+        shader.uniforms.uCurrentHue = customUniforms.uCurrentHue;
+        shader.uniforms.uMirrorHue = customUniforms.uMirrorHue;
+        shader.uniforms.uGridDensity = customUniforms.uGridDensity;
+        shader.uniforms.uColorMode = customUniforms.uColorMode;
+        shader.uniforms.uRandCol1 = customUniforms.uRandCol1;
+        shader.uniforms.uRandCol2 = customUniforms.uRandCol2;
+        shader.uniforms.uMixVal = customUniforms.uMixVal;            // cda guess
+
+        // Inject Vertex Logic (Geometry)
+        shader.vertexShader = shader.vertexShader.replace('#include <common>', 
+            `#include <common>
+             ${vertexPars}`
+        );
+        shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>', 
+            `#include <begin_vertex>
+             ${vertexMain}`
+        );
+
+        // Inject Fragment Logic (Color) - ONLY for Visual Material, not Depth
+        if (isFragment) {
+            shader.fragmentShader = shader.fragmentShader.replace('#include <common>',
+                `#include <common>
+                 ${fragmentPars}`
+            );
+            // We inject color logic just before lighting calculations
+            // 'color_fragment' is a safe place to set diffuseColor
+            shader.fragmentShader = shader.fragmentShader.replace('#include <color_fragment>',
+                `#include <color_fragment>
+                 ${fragmentMain}`
+            );
+        }
+    };
+    
+    // Apply to Visual Material (Vertex + Fragment)
+    matFlr.onBeforeCompile = (shader) => modifyShader(shader, true);
+
+    // Apply to Depth Material (Vertex ONLY) - Shadows don't need color
+    depthMatFlr.onBeforeCompile = (shader) => modifyShader(shader, false);
+
+    // --- SCENE OBJECTS ---
+    const roomFlr = new THREE.Mesh(geoFlr, matFlr); 
+    roomFlr.rotation.x = -Math.PI / 2; 
+    roomFlr.receiveShadow = true; 
+    roomFlr.castShadow = true; 
+    roomFlr.customDepthMaterial = depthMatFlr;
+    scene.add(roomFlr);
+  
+    const cube = new THREE.Mesh(
+      new THREE.BoxGeometry(1, 1, 1), 
+      new THREE.MeshStandardMaterial({ color: 0xff0040 })
+    );
+    cube.position.set(0, 2, 0);
+    cube.castShadow = true; 
+    scene.add(cube);
+  
+    const torus = new THREE.Mesh( 
+        new THREE.TorusGeometry( .25, .1, 12, 48 ), 
+        new THREE.MeshNormalMaterial() 
+    );
+    torus.rotation.x = -Math.PI / 2; 
+    torus.position.set(5, 8, 5);
+    scene.add( torus );
+    /* old earth
+    const earth = new THREE.Mesh( 
+        new THREE.SphereGeometry( 300., 40,30 ), // radius, wsegs, hSegs
+        new THREE.MeshStandardMaterial( { color: 0xffff00 } )
+    );
+    earth.rotation.x = -Math.PI / 2; 
+    earth.position.set(0, -240, -450);
+    scene.add( earth );
+    */
+    // --- ADVANCED EARTH SETUP ---
+    const earthGroup = new THREE.Group();
+    // Position matching your old sphere
+    earthGroup.position.set(0, -240, -450); 
+    earthGroup.rotation.z = -23.4 * Math.PI / 180; // Tilt
+    scene.add(earthGroup);
+	
+    
+    const texLoader = new THREE.TextureLoader();
+	/* Advanced Robot Bobby end YT create the earth with TSL 2.56m 
+	function loadTexture(path, srbg = false) {
+	  const tex = texLoader.load(path);
+	  tex.ansiotropy = 8;
+	  if (srbg) {tex.colorSpace = THREE.SRBGColorSpace;}
+	  return tex;
+	}
+	const dayTexture = loadTexture('./textures/planets/earth_day_4096.jpg',true);
+	const nightTexture = loadTexture('./threejs-earth/textures/03_earthlights1k.jpg',true);
+	const bumpRoughnessCloudsTexture = loadTexture('./textures/planets/earth_bump_roughness_clouds_4096.jpg');
+	const bumpRoughnessClouds = texture(bumpRoughnessCloudsTexture,uv()); // r=bmp g=roughness b=clouds
+	const sunOrientation = normalWorldGeometry.dot(normalize(sunLight.position)).toVar();
+	const geometry = new THREE.SphereGeometry(2.0,64,64); // 4225 vertices 8192 faces
+	const material = new THREE.MeshStandardNodeMaterial({});
+	material.colorNode = texture(dayTexture);
+	
+	const roughness = bumpRoughnessClouds.g;
+	material.roughnessNode = roughness.remap(0,1,roughnessLow, roughnessHigh); // 4.32m pause
+	
+	const night = texture(nightTexture);
+	const dayStrength = sunOrientation.smoothstep(-0.25,0.5); // (0,1) is sharp earth terminator
+	const dayNightMix = mix(night.rgb,material.colorNode.rbg, dayStrength);
+	material.outputNode = vec4(dayNightMix, output.a);
+	const globe = new THREE.Mesh(geometry,material);
+	scene.add(globe);
+ 	
+     Advanced Robot Bobby end YT create the earth with TSL 2.56m 4.32m pause END */
+	
+    // Geometry (Radius=1, we will scale the group up later)
+    const earthGeo = new THREE.IcosahedronGeometry(1, 12);
+
+    // 1. EARTH BASE (Phong)
+	/*
+	      
+      map: texLoader.load('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_atmos_2048.jpg'),
+      specularMap: texLoader.load('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_specular_2048.jpg'),
+      bumpMap: texLoader.load('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_normal_2048.jpg'),
+	*/
+    const earthMat = new THREE.MeshPhongMaterial({
+      // Use these online URLs or your local ./textures/ path
+	  map: texLoader.load('./threejs-earth/textures/00_earthmap1k.jpg'),
+      specularMap: texLoader.load('./threejs-earth/textures/02_earthspec1k.jpg'),
+      bumpMap: texLoader.load('./threejs-earth/textures/01_earthbump1k.jpg'),
+      bumpScale: 0.04,
+    });
+    const earthMesh = new THREE.Mesh(earthGeo, earthMat);
+    earthGroup.add(earthMesh);
+
+    // 2. CITY LIGHTS (Basic + Additive)
+    // (Optional: Requires a night lights texture. Standard Three.js examples don't always have this, 
+    // but here is a placeholder. If black, it's just invisible.)
+    const lightsMat = new THREE.MeshBasicMaterial({
+      map: texLoader.load('./threejs-earth/textures/03_earthlights1k.jpg'), // Local file required
+      blending: THREE.AdditiveBlending,
+    });
+    const lightsMesh = new THREE.Mesh(earthGeo, lightsMat);
+    earthGroup.add(lightsMesh);
+    
+    // 3. CLOUDS (Standard + Alpha)
+	// map: texLoader.load('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_clouds_1024.png'),
+    const cloudsMat = new THREE.MeshStandardMaterial({
+      map: texLoader.load('./threejs-earth/textures/04_earthcloudmap.jpg'),
+      transparent: true,
+      opacity: 0.8,
+      blending: THREE.AdditiveBlending,
+	  alphaMap: texLoader.load('./threejs-earth/textures/05_earthcloudmaptrans.jpg'),
+	  // alphaTest: 0.3,
+      // side: THREE.DoubleSide, // CDA Gem AI added this line
+    });
+    const cloudsMesh = new THREE.Mesh(earthGeo, cloudsMat);
+    cloudsMesh.scale.setScalar(1.003); // Slightly larger than earth
+    earthGroup.add(cloudsMesh);
+
+    // 4. ATMOSPHERE GLOW (Fresnel)
+    const glowMat = getFresnelMat();
+    const glowMesh = new THREE.Mesh(earthGeo, glowMat);
+    glowMesh.scale.setScalar(1.01); // Larger than clouds
+    earthGroup.add(glowMesh);
+    
+    // SCALE IT UP
+    // Your old sphere was Radius 300. This geometry is Radius 1.
+    // So we scale the whole group by 300.
+    earthGroup.scale.setScalar(300);
+	
+	const stars = getStarfield({numStars: 2000});
+    scene.add(stars);
+
+    // Lighting
+    const spotLight = new THREE.SpotLight(0xffffff, 100); 
+    spotLight.position.set(5, 8, 5);
+    spotLight.angle = Math.PI / 4;
+    spotLight.castShadow = true;
+    spotLight.shadow.bias = -0.0001; 
+    spotLight.shadow.mapSize.width = 1024;
+    spotLight.shadow.mapSize.height = 1024;       
+    scene.add(spotLight);
+    // scene.add(new THREE.AmbientLight(0x606060));
+    // scene.add(new THREE.AmbientLight(0x303030));
+	scene.add(new THREE.AmbientLight(0x181818));
+	
+	const sunLight = new THREE.DirectionalLight(0xffffff, .5);
+    sunLight.position.set(-1000., -300., 500.); // -2.0,0.5,1.5 earth at  earthGroup.position.set(0, -240, -450); 
+    scene.add(sunLight);
+	
+    const moonGroup = new THREE.Group();
+    scene.add(moonGroup);
+    const moonMat = new THREE.MeshStandardMaterial({
+      map: texLoader.load("./threejs-earth/textures/06_moonmap4k.jpg"),
+      bumpMap: texLoader.load("./threejs-earth/textures/07_moonbump4k.jpg"),
+      bumpScale: 2,
+    });
+    const moonMesh = new THREE.Mesh(earthGeo, moonMat);
+	// orginal earthGroup 0,0,0 shifted to (0, -240, -450)
+	// orginal moonGroup 2,0,0 shifted to (0, -240, -450)
+    moonMesh.position.set(2, 0, 0);
+    moonMesh.scale.setScalar(0.27);
+    moonGroup.add(moonMesh);
+	moonGroup.scale.setScalar(300);
+	
+    // --- ANIMATION LOOP ---
+    const clock = new THREE.Clock();
+    
+    // Helper for Hue Rotation
+    let hueAccumulator = 240.0; // Start Blue
+    
+    /* UltraHDRLoader
+    // add environment map
+    const hdrLoader = new UltraHDRLoader(); // rogland_clear_night_4k.exr from https://polyhaven.com/a/rogland_clear_night
+//    hdrLoader.load('envs/test.jpg', (hdr) => {
+//    hdrLoader.load('rogland_clear_night_4k.exr', (hdr) => {
+//      hdrLoader.load('https://www.spacespheremaps.com/wp-content/uploads/HDR_asteroid_field.hdr',  (hdr) => {
+      hdrLoader.load('HDR_asteroid_field.hdr',  (hdr) => {
+      hdr.mapping = THREE.EquirectangularReflectionMapping;
+      scene.background = hdr;
+      scene.environment = hdr;
+    },
+     (progress) => {
+        // Progress (optional)
+         console.log((progress.loaded / progress.total * 100) + '% loaded'); 
+    },
+    (error) => {
+        // ERROR HANDLER
+        console.error("An error happened:", error);
+    });
+*/
+
+    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+    pmremGenerator.compileEquirectangularShader();
+  
+      const rgbeLoader = new RGBELoader();
+    // Using a known CORS-friendly space HDR from Poly Haven
+    // rgbeLoader.load('https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/starmap_2020_1k.hdr', (hdr) => {
+    // rgbeLoader.load('https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/starmap_2020_1k.hdr', (hdr) => {
+    rgbeLoader.load('HDR_asteroid_field.hdr',  (hdr) => {
+    hdr.mapping = THREE.EquirectangularReflectionMapping;
+    
+    scene.background = hdr;
+    scene.environment = hdr;
+
+    // Dispose generator to save memory
+    pmremGenerator.dispose();
+    }, 
+    (progress) => {
+      console.log((progress.loaded / progress.total * 100) + '% loaded');
+    }, 
+    (error) => {
+      console.error("An error occurred:", error);
+    });
+    
+/*    exrLoader
+      // 2. Add environment map code (just before your animate loop)
+    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+    pmremGenerator.compileEquirectangularShader();
+    const exrLoader = new EXRLoader();
+      // CORS error !
+      // exrLoader.load('rogland_clear_night_4k.exr', (texture) => {
+      // exrLoader.load('https://www.spacespheremaps.com/wp-content/uploads/HDR_asteroid_field.hdr', (texture)  => {
+      exrLoader.load('https://dl.polyhaven.org/file/ph-assets/HDRIs/exr/4k/rogland_clear_night_4k.exr', (texture)  => {
+      // Defines how the texture is mapped to the sphere
+      texture.mapping = THREE.EquirectangularReflectionMapping;
+      console.log("what is >",texture,"<");
+      // Set background (visible) and environment (reflections/light)
+      scene.background = texture;
+      scene.environment = texture;
+      // Optional: free up memory if you don't need to change it later
+      pmremGenerator.dispose();
+    },
+     (progress) => {
+        // Progress (optional)
+         console.log((progress.loaded / progress.total * 100) + '% loaded'); 
+    },
+    (error) => {
+        // ERROR HANDLER
+        console.error("An error happened:", error);
+    });
+*/
+
+    function animate() {
+        requestAnimationFrame(animate);
+        const delta = clock.getDelta();                               
+        const time = clock.getElapsedTime();
+        
+		// --- EARTH ROTATION ---
+        earthMesh.rotation.y += 0.002;
+        cloudsMesh.rotation.y += 0.0023; // Clouds move faster
+        glowMesh.rotation.y += 0.002;
+        if (lightsMesh) lightsMesh.rotation.y += 0.002;
+		// stars.rotation.y -= 0.0002;
+		moonGroup.rotation.y += 0.01;
+		
+        // 2. FADE LOGIC
+        let currentMix = 1.0; // Default to full color (Static Mode 0)
+        // Calculate a 0.0-1.0 progress bar based on time and fadeTime
+        // This creates a perfect loop every 'fadeTime' seconds
+        var loopProgress = (time % guiObj.fadeTime) / guiObj.fadeTime;
+      
+        // guiObj.subProg = 1;
+      
+        if (guiObj.animMode === 1) { 
+          // Fade Up: 0.0 -> 1.0 (Sawtooth)
+          currentMix = loopProgress; 
+        } 
+        else if (guiObj.animMode === 2) { 
+          // Fade Down: 1.0 -> 0.0 (Reverse Sawtooth)
+          currentMix = 1.0 - loopProgress; 
+        } 
+        else if (guiObj.animMode === 3) { 
+          // Pulse: 0.0 -> 1.0 -> 0.0 (Triangle Wave)
+          // This math converts 0->1 linear line into a 0->1->0 triangle
+          currentMix = 1.0 - Math.abs((loopProgress * 2.0) - 1.0); 
+        }
+        
+        // 1. Update Uniforms
+        customUniforms.uTime.value = time;
+        customUniforms.uProg.value = guiObj.subProg;
+        customUniforms.uRipSize.value = guiObj.ripSize;
+        customUniforms.uRipFreq.value = guiObj.ripFreq;
+        customUniforms.uFreezeRip.value = guiObj.myBoolean;
+        customUniforms.uGridDensity.value = guiObj.gridDensity;
+        customUniforms.uColorMode.value = guiObj.colorMode;
+        customUniforms.uMixVal.value = currentMix;
+
+        // 2. Flight Logic
+        if (guiObj.subProg == 3) {
+          customUniforms.uFly.value.y += guiObj.flySpeed * delta * 1.0; 
+        }
+
+        // 3. COLOR ROTATION LOGIC
+        // Increment Hue based on speed
+        if (guiObj.colRot) {
+           hueAccumulator = (hueAccumulator + guiObj.hueSpeed) % 360.0;
+        } else {
+           // Stop Colour rotation  
+           // hueAccumulator = (hueAccumulator) % 360.0;
+           hueAccumulator = 240.0;
+        }
+      
+        customUniforms.uCurrentHue.value = hueAccumulator;
+        // Mirror hue is always 180 degrees opposite
+        customUniforms.uMirrorHue.value = (hueAccumulator + 180.0) % 360.0;
+
+        // Objects
+        cube.rotation.x = time;
+        cube.rotation.y = time * 0.5;
+        cube.position.y = 2 + Math.sin(time) * 0.5; 
+
+        // Light & Torus
+        var lx; var ly; 
+        if (guiObj.freezeSpot) {
+           lx = 2 * Math.abs(2.5 + Math.sin(0) * 5.0);
+           ly = 3 * Math.abs(2.8 + Math.sin(0) * 5.0);
+        } else {
+           lx = Math.abs(2.5 + Math.sin(time) * 5.0);
+           ly = Math.abs(2.8 + Math.sin(time) * 5.0);
+        }
+        spotLight.position.set(lx, ly, 2.5); 
+        torus.position.set(lx, ly, 2.5); 
+     
+        renderer.render(scene, camera);
+    }
+    animate();
+	
+	function handleWindowResize () {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+    window.addEventListener('resize', handleWindowResize, false);
+</script>
+</body>
+</html>
