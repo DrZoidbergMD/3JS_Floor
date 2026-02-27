@@ -766,9 +766,10 @@
     // rgbeLoader.load('https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/starmap_2020_1k.hdr', (hdr) => {
     // rgbeLoader.load('HDR_asteroid_field.hdr',  (hdr) => {
 	// fix for git
-	rgbeLoader.load('https://drive.google.com/uc?export=download&id=15lJYiSCl28jI80nFe3iMXVlfLOY-5vvL',  (hdr) => {  // 2k version     8Mb
+//	rgbeLoader.load('https://drive.google.com/uc?export=download&id=15lJYiSCl28jI80nFe3iMXVlfLOY-5vvL',  (hdr) => {  // 2k version     8Mb
 //	rgbeLoader.load('https://drive.google.com/uc?export=download&id=1ZOKFYb51oM2LBwUxcPZ3p1q75csOqb8F',  (hdr) => {  // 4k version    32Mb
 //	rgbeLoader.load('https://drive.google.com/uc?export=download&id=1k4NwrOcPJrZIai7U1FKLTC1vNxnWXN9y',  (hdr) => {  // 8k version    64Mb
+    rgbeLoader.load('https://github.com/DrZoidbergMD/3JS_Floor/releases/download/v0.1/HDR_asteroid_field.hdr',  (hdr) => {  // 8k version    64Mb
     hdr.mapping = THREE.EquirectangularReflectionMapping;
     
     scene.background = hdr;
