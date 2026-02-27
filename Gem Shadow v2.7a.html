@@ -772,12 +772,20 @@
 //    rgbeLoader.load('https://github.com/DrZoidbergMD/3JS_Floor/releases/download/v0.1/HDR_asteroid_field.hdr',  (hdr) => {  // 8k version    64Mb
 
 	// Add a proxy prefix to your GitHub Release URL
-    const proxy = 'https://corsproxy.io?';
-    const githubUrl = 'https://github.com/DrZoidbergMD/3JS_Floor/releases/download/v0.1/HDR_asteroid_field.hdr';
+//    const proxy = 'https://corsproxy.io?';
+//    const githubUrl = 'https://github.com/DrZoidbergMD/3JS_Floor/releases/download/v0.1/HDR_asteroid_field.hdr';
+	// {"error":"This content type is not allowed on the free plan. Upgrade at https://corsproxy.io/pricing/"}
+//    rgbeLoader.load(proxy + githubUrl, (hdr) => {
 
-    rgbeLoader.load(proxy + githubUrl, (hdr) => {
+
+    // FORMAT: https://cdn.jsdelivr.net
+    const hdrUrl = 'https://cdn.jsdelivr.net';
+
+    rgbeLoader.load(hdrUrl, (hdr) => {
+    // Your code to handle the loaded HDR...
+    console.log("HDR Loaded successfully via jsDelivr!");
+
     hdr.mapping = THREE.EquirectangularReflectionMapping;
-    
     scene.background = hdr;
     scene.environment = hdr;
 
