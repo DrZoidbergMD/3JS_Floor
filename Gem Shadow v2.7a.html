@@ -765,7 +765,8 @@
     // rgbeLoader.load('https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/starmap_2020_1k.hdr', (hdr) => {
     // rgbeLoader.load('https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/starmap_2020_1k.hdr', (hdr) => {
     // rgbeLoader.load('HDR_asteroid_field.hdr',  (hdr) => {
-//     rgbeLoader.load('./resources/HDR_asteroid_field_2k.hdr',  (hdr) => {
+	// Retry local file
+     rgbeLoader.load('./resources/HDR_asteroid_field_2k.hdr',  (hdr) => {
 	// fix for git
 //	rgbeLoader.load('https://drive.google.com/uc?export=download&id=15lJYiSCl28jI80nFe3iMXVlfLOY-5vvL',  (hdr) => {  // 2k version     8Mb
 //	rgbeLoader.load('https://drive.google.com/uc?export=download&id=1ZOKFYb51oM2LBwUxcPZ3p1q75csOqb8F',  (hdr) => {  // 4k version    32Mb
@@ -777,7 +778,7 @@
 //	rgbeLoader.load('https://github.com/DrZoidbergMD/3JS_Floor/releases/download/v0.1/HDR_asteroid_field_2k.hdr',  (hdr) => {  // 2k version    8Mb
 
      // This is interesting, Github generates the exact same CORS error even when pointed at a missing file
-	rgbeLoader.load('https://github.com/DrZoidbergMD/3JS_Floor/releases/download/v0.1/FILENOTFOUND.hdr',  (hdr) => {  // 2k version    8Mb
+//	rgbeLoader.load('https://github.com/DrZoidbergMD/3JS_Floor/releases/download/v0.1/FILENOTFOUND.hdr',  (hdr) => {  // 2k version    8Mb
      // Add a proxy prefix to your GitHub Release URL
 //    const proxy = 'https://corsproxy.io?';
 //    const githubUrl = 'https://github.com/DrZoidbergMD/3JS_Floor/releases/download/v0.1/HDR_asteroid_field.hdr';
