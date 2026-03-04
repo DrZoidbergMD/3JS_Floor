@@ -761,40 +761,49 @@
     pmremGenerator.compileEquirectangularShader();
   
       const rgbeLoader = new RGBELoader();
-    // Using a known CORS-friendly space HDR from Poly Haven
+    // Robot Bobby code Using a known CORS-friendly space HDR from Poly Haven
     // rgbeLoader.load('https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/starmap_2020_1k.hdr', (hdr) => {
     // rgbeLoader.load('https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/starmap_2020_1k.hdr', (hdr) => {
+	
     // rgbeLoader.load('HDR_asteroid_field.hdr',  (hdr) => {
-	// Retry local file
-     rgbeLoader.load('./resources/HDR_asteroid_field_2k.hdr',  (hdr) => {
+	// Retry local file - still fails
+//     rgbeLoader.load('./resources/HDR_asteroid_field_2k.hdr',  (hdr) => {
+	 // try RAW method - I never included main folder in previous links
+	 rgbeLoader.load('https://raw.githubusercontent.com/DrZoidbergMD/3JS_Floor/main/resources/HDR_asteroid_field_2k.hdr',  (hdr) => {
 	// fix for git
+	
+	// Initial Google Drive method attempts
 //	rgbeLoader.load('https://drive.google.com/uc?export=download&id=15lJYiSCl28jI80nFe3iMXVlfLOY-5vvL',  (hdr) => {  // 2k version     8Mb
 //	rgbeLoader.load('https://drive.google.com/uc?export=download&id=1ZOKFYb51oM2LBwUxcPZ3p1q75csOqb8F',  (hdr) => {  // 4k version    32Mb
 //	rgbeLoader.load('https://drive.google.com/uc?export=download&id=1k4NwrOcPJrZIai7U1FKLTC1vNxnWXN9y',  (hdr) => {  // 8k version    64Mb
-//    rgbeLoader.load('https://github.com/DrZoidbergMD/3JS_Floor/releases/download/v0.1/Assets/HDR_asteroid_field_2k.hdr',  (hdr) => {  // 8k version    64Mb
-//    rgbeLoader.load('https://drzoidbergmd.github.io/3JS_Floor/releases/download/v0.1/Assets/HDR_asteroid_field_2k.hdr',  (hdr) => {  // 8k version    64Mb
 
+	// Release method attempts
+//    rgbeLoader.load('https://github.com/DrZoidbergMD/3JS_Floor/releases/download/v0.1/Assets/HDR_asteroid_field_2k.hdr',  (hdr) => {  // 8k version    64Mb
 //   Line below uses copied link from Releases folder
-//	rgbeLoader.load('https://github.com/DrZoidbergMD/3JS_Floor/releases/download/v0.1/HDR_asteroid_field_2k.hdr',  (hdr) => {  // 2k version    8Mb
+//   rgbeLoader.load('https://github.com/DrZoidbergMD/3JS_Floor/releases/download/v0.1/HDR_asteroid_field_2k.hdr',  (hdr) => {  // 2k version    8Mb
+
+     // using Pages ?
+//    rgbeLoader.load('https://drzoidbergmd.github.io/3JS_Floor/releases/download/v0.1/Assets/HDR_asteroid_field_2k.hdr',  (hdr) => {  // 8k version    64Mb
 
      // This is interesting, Github generates the exact same CORS error even when pointed at a missing file
 //	rgbeLoader.load('https://github.com/DrZoidbergMD/3JS_Floor/releases/download/v0.1/FILENOTFOUND.hdr',  (hdr) => {  // 2k version    8Mb
+
+     // Various proxy methods
      // Add a proxy prefix to your GitHub Release URL
 //    const proxy = 'https://corsproxy.io?';
 //    const githubUrl = 'https://github.com/DrZoidbergMD/3JS_Floor/releases/download/v0.1/HDR_asteroid_field.hdr';
 	// {"error":"This content type is not allowed on the free plan. Upgrade at https://corsproxy.io/pricing/"}
-	
+
 //	const proxy = 'https://proxy-eu.corsfix.com?';
 //    const githubUrl = 'https://github.com/DrZoidbergMD/3JS_Floor/releases/download/v0.1/HDR_asteroid_field_2k.hdr';
 //    rgbeLoader.load(proxy + githubUrl, (hdr) => {
 
-
     // FORMAT: https://cdn.jsdelivr.net
 //    const hdrUrl = 'https://cdn.jsdelivr.net';
-
 //     rgbeLoader.load(hdrUrl, (hdr) => {
     // Your code to handle the loaded HDR...
 //    console.log("HDR Loaded successfully via jsDelivr!");
+
 
 //    rgbeLoader.crossOrigin = null;
 
