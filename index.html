@@ -14,6 +14,9 @@
        }
       }
     </script>
+	<script>
+	  <div id="progress">Loading: 0%</div>
+	</script>
 </head>
 <body>
 <script type="module">
@@ -126,6 +129,9 @@
     renderer.shadowMap.enabled = true; 
     renderer.shadowMap.type = THREE.PCFSoftShadowMap; 
     document.body.appendChild(renderer.domElement);
+	
+	// 1. Create a div in your HTML for the loader: <div id="progress">Loading: 0%</div>
+	const progressDiv = document.getElementById('progress');
 
     const controls = new OrbitControls( camera, renderer.domElement );
     const gui = new GUI(); 
