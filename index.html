@@ -17,7 +17,7 @@
 </head>
 <body>
 <script type="module">
-    // CDA modified Gem Shadow GIT v2.8a renamed index.html
+    // CDA modified Gem Shadow GIT v2.8b renamed index.html
     import * as THREE from 'three';
     import { OrbitControls } from 'OrbitControls';
     import GUI from 'lil-gui';
@@ -794,9 +794,17 @@
     // Dispose generator to save memory
     pmremGenerator.dispose();
     }, 
-    (progress) => {
-      console.log((progress.loaded / progress.total * 100) + '% loaded');
-    }, 
+	(xhr) => {
+        // Progress callback
+        if (xhr.lengthComputable) {
+            const percentComplete = Math.round((xhr.loaded / xhr.total) * 100);
+            console.log(percentComplete + '% downloaded');
+            progressDiv.innerText = `Loading HDR: ${percentComplete}%`;
+        }
+    },
+//    (progress) => {
+//      console.log((progress.loaded / progress.total * 100) + '% loaded');
+//    }, 
     (error) => {
       console.error("An error occurred:", error);
     });
