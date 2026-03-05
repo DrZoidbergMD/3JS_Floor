@@ -14,13 +14,12 @@
        }
       }
     </script>
-	<script>
-	  <div id="progress">Loading: 0%</div>
-	</script>
 </head>
 <body>
+<div id="envMapProg">Loading: 0%</div>
 <script type="module">
     // CDA modified Gem Shadow GIT v2.8b renamed index.html
+	
     import * as THREE from 'three';
     import { OrbitControls } from 'OrbitControls';
     import GUI from 'lil-gui';
@@ -131,7 +130,7 @@
     document.body.appendChild(renderer.domElement);
 	
 	// 1. Create a div in your HTML for the loader: <div id="progress">Loading: 0%</div>
-	const progressDiv = document.getElementById('progress');
+	const progressDiv = document.getElementById('envMapProg');
 
     const controls = new OrbitControls( camera, renderer.domElement );
     const gui = new GUI(); 
