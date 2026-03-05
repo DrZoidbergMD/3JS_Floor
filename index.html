@@ -805,7 +805,7 @@
         // Progress callback
         if (xhr.lengthComputable) {
             const percentComplete = Math.round((xhr.loaded / xhr.total) * 100);
-            console.log(percentComplete + '% downloaded');
+			console.log(xhr.loaded + ' of ' + xhr.total + ' percentComplete + '% downloaded');
             progressDiv.innerText = `Loading HDR: ${percentComplete}%`;
 			if (xhr.loaded >= xhr.total) {
 			  progressDiv.style.display = "none"; // hide when complete
