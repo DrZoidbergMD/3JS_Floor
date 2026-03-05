@@ -1,7 +1,9 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <style> body { margin: 0; overflow: hidden; } </style>
+    <style> body { margin: 0; overflow: hidden; } 
+	div.divStyle { margin: 0; height: 40px; width: 30%; background-color: powderblue; }
+	</style>
     <script type="importmap">
       {
       "imports": { 
@@ -16,7 +18,7 @@
     </script>
 </head>
 <body>
-<div id="envMapProg">Loading: 0%</div>
+<div id="envMapProg" class="divStyle">Loading: 0%</div>
 <script type="module">
     // CDA modified Gem Shadow GIT v2.8b renamed index.html
 	
@@ -805,6 +807,11 @@
             const percentComplete = Math.round((xhr.loaded / xhr.total) * 100);
             console.log(percentComplete + '% downloaded');
             progressDiv.innerText = `Loading HDR: ${percentComplete}%`;
+			if (xhr.loaded >= xhr.total) {
+			  progressDiv.style.display = "none"; // hide when complete
+			} else { 
+			  progressDiv.style.display = "block";
+			}
         }
     },
 //    (progress) => {
