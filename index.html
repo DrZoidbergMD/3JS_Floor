@@ -782,7 +782,14 @@
 
     const pmremGenerator = new THREE.PMREMGenerator(renderer);
     pmremGenerator.compileEquirectangularShader();
-  
+	// Hack to fix loading progress percentage
+	let fileRes = "4k";  // "2k"; "8k";  // File resolutions
+	let fileTot = 65687151;
+    if (fileRes = "4k"") {
+		fileTot = 33554497;
+	} else if (fileRes == "2k") {
+		fileTot = 8388673;
+	}
       const rgbeLoader = new RGBELoader();
     // Robot Bobby code Using a known CORS-friendly space HDR from Poly Haven
     // rgbeLoader.load('https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/starmap_2020_1k.hdr', (hdr) => {
@@ -822,8 +829,10 @@
 	(xhr) => {
         // Progress callback
         if (xhr.lengthComputable) {
-            const percentComplete = Math.round((xhr.loaded / xhr.total) * 100);
-			console.log(xhr.loaded + ' of ' + xhr.total + ' so ' + percentComplete + '% downloaded');
+//            const percentComplete = Math.round((xhr.loaded / xhr.total) * 100); // fileTot
+//			console.log(xhr.loaded + ' of ' + xhr.total + ' so ' + percentComplete + '% downloaded');
+            const percentComplete = Math.round((xhr.loaded / fileTot) * 100); // fileTot
+			console.log(xhr.loaded + ' of ' + fileTot + ' so ' + percentComplete + '% downloaded');
             progressDiv.innerText = `Loading HDR: ${percentComplete}%`;
         }
     },
