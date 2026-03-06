@@ -1,8 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <style> body { margin: 0; overflow: hidden; } 
-	div.divStyle { margin: 0; height: 40px; width: 30%; background-color: powderblue; }
+    <style> body { margin: 0; overflow: hidden; }
+	div.divStyle { 
+    /* The magic happens here */
+    position: absolute; 
+    top: 20px;          /* Distance from the top of the screen */
+    left: 50%;          /* Move to the horizontal center */
+    transform: translateX(-50%); /* Offset by half its width to perfectly center */
+    
+    z-index: 100;       /* Ensures it stays on top of the 3D canvas */
+    
+    /* Your existing styles */
+    height: 40px; 
+    width: 30%; 
+    background-color: powderblue; 
+    text-align: center; /* Center the text inside the box */
+    line-height: 40px;  /* Center the text vertically */
+    font-family: sans-serif;
+    border-radius: 8px; /* Optional: makes it look a bit cleaner */
+  }
 	</style>
     <script type="importmap">
       {
@@ -797,6 +814,7 @@
     hdr.mapping = THREE.EquirectangularReflectionMapping;
     scene.background = hdr;
     scene.environment = hdr;
+    progressDiv.style.display = "none";
 
     // Dispose generator to save memory
     pmremGenerator.dispose();
@@ -807,11 +825,6 @@
             const percentComplete = Math.round((xhr.loaded / xhr.total) * 100);
 			console.log(xhr.loaded + ' of ' + xhr.total + ' so ' + percentComplete + '% downloaded');
             progressDiv.innerText = `Loading HDR: ${percentComplete}%`;
-			if (xhr.loaded >= xhr.total) {
-			  progressDiv.style.display = "none"; // hide when complete
-			} else { 
-			  progressDiv.style.display = "block";
-			}
         }
     },
 //    (progress) => {
