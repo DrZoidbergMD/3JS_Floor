@@ -627,12 +627,17 @@
 	wallPaperTex.wrapS = THREE.RepeatWrapping;
 	wallPaperTex.wrapT = THREE.RepeatWrapping;
 	wallPaperTex.repeat.set(4, 2); 
-
+	
 	// The black and white image defining where the window is
 	const windowAlphaTex = texLoader.load('./walls/alpha_test_window_Crop_590.jpg');
 
+	const ceilingTex = texLoader.load('./walls/IMG_3872.JPG'); 
+//	ceilingTex.wrapS = THREE.RepeatWrapping;
+//	ceilingTex.wrapT = THREE.RepeatWrapping;
+//	ceilingTex.repeat.set(1, 1); 
+
 	// 2. CREATE MATERIALS
-	// Back Wall & Ceiling (Solid Wallpaper)
+	// Back Wall (Solid Wallpaper)
 	const solidWallMat = new THREE.MeshStandardMaterial({
 		map: wallPaperTex,
 		side: THREE.DoubleSide // Ensures it renders no matter which way it faces
@@ -645,6 +650,12 @@
 		transparent: true,      // REQUIRED for alphaMap to work
 		alphaTest: 0.5,         // Keeps shadows looking clean through the window hole
 		side: THREE.DoubleSide
+	});
+	
+	// Ceiling (Solid Wallpaper)
+	const solidCeilingMat = new THREE.MeshStandardMaterial({
+		map: ceilingTex,
+		side: THREE.DoubleSide // Ensures it renders no matter which way it faces
 	});
 
 	// 3. BUILD THE GEOMETRY
@@ -672,7 +683,8 @@
 	scene.add(rightWall);
 
 	// --- CEILING ---
-	const ceiling = new THREE.Mesh(ceilingGeo, solidWallMat);
+
+	const ceiling = new THREE.Mesh(ceilingGeo, solidCeilingMat);
 	ceiling.receiveShadow = true; // ceiling.castShadow = true; 
 	ceiling.rotation.x = Math.PI / 2; // Lay flat
 	ceiling.position.set(0, 10, 0);   // Move to top of walls
