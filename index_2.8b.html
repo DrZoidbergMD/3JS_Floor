@@ -37,7 +37,7 @@
 <body>
 <div id="envMapProg" class="divStyle">Loading: 0%</div>
 <script type="module">
-    // CDA modified Gem Shadow GIT v3.0.html renamed index.html
+    // CDA modified Gem Shadow GIT v2.8b renamed index.html
 	
     import * as THREE from 'three';
     import { OrbitControls } from 'OrbitControls';
@@ -616,66 +616,15 @@
     torus.rotation.x = -Math.PI / 2; 
     torus.position.set(5, 8, 5);
     scene.add( torus );
-	
-	//
-	// Walls and ceiling
-	//
-	const texLoader = new THREE.TextureLoader();
-	// Your wallpaper pattern
-	const wallPaperTex = texLoader.load('./walls/arabic-design_240.jpg'); 
-	// Optional: Repeat the texture so it doesn't stretch massively
-	wallPaperTex.wrapS = THREE.RepeatWrapping;
-	wallPaperTex.wrapT = THREE.RepeatWrapping;
-	wallPaperTex.repeat.set(4, 2); 
-
-	// The black and white image defining where the window is
-	const windowAlphaTex = texLoader.load('./walls/alpha_test_window_Crop_590.jpg');
-
-	// 2. CREATE MATERIALS
-	// Back Wall & Ceiling (Solid Wallpaper)
-	const solidWallMat = new THREE.MeshStandardMaterial({
-		map: wallPaperTex,
-		side: THREE.DoubleSide // Ensures it renders no matter which way it faces
-	});
-
-	// Left & Right Walls (Wallpaper + Window Hole)
-	const windowWallMat = new THREE.MeshStandardMaterial({
-		map: wallPaperTex,
-		alphaMap: windowAlphaTex,
-		transparent: true,      // REQUIRED for alphaMap to work
-		alphaTest: 0.5,         // Keeps shadows looking clean through the window hole
-		side: THREE.DoubleSide
-	});
-
-	// 3. BUILD THE GEOMETRY
-	const wallGeo = new THREE.PlaneGeometry(20, 10); // Width 20, Height 10
-	const ceilingGeo = new THREE.PlaneGeometry(20, 20); // Matches floor
-
-	// --- BACK WALL ---
-	const backWall = new THREE.Mesh(wallGeo, solidWallMat);
-	backWall.position.set(0, 5, -10); // Up 5 (half height), pushed back 10
-	scene.add(backWall);
-
-	// --- LEFT WALL (With Window) ---
-	const leftWall = new THREE.Mesh(wallGeo, windowWallMat);
-	leftWall.rotation.y = Math.PI / 2; // Rotate 90 degrees
-	leftWall.position.set(-10, 5, 0);  // Push left 10, up 5
-	scene.add(leftWall);
-
-	// --- RIGHT WALL (With Window) ---
-	const rightWall = new THREE.Mesh(wallGeo, windowWallMat);
-	rightWall.rotation.y = -Math.PI / 2; // Rotate -90 degrees
-	rightWall.position.set(10, 5, 0);    // Push right 10, up 5
-	scene.add(rightWall);
-
-	// --- CEILING ---
-	const ceiling = new THREE.Mesh(ceilingGeo, solidWallMat);
-	ceiling.rotation.x = Math.PI / 2; // Lay flat
-	ceiling.position.set(0, 10, 0);   // Move to top of walls
-	scene.add(ceiling);
-
-// Notice: We simply don't create a front wall!
-
+    /* old earth
+    const earth = new THREE.Mesh( 
+        new THREE.SphereGeometry( 300., 40,30 ), // radius, wsegs, hSegs
+        new THREE.MeshStandardMaterial( { color: 0xffff00 } )
+    );
+    earth.rotation.x = -Math.PI / 2; 
+    earth.position.set(0, -240, -450);
+    scene.add( earth );
+    */
     // --- ADVANCED EARTH SETUP ---
     const earthGroup = new THREE.Group();
     // Position matching your old sphere
@@ -683,7 +632,8 @@
     earthGroup.rotation.z = -23.4 * Math.PI / 180; // Tilt
     scene.add(earthGroup);
 	
-//    const texLoader = new THREE.TextureLoader();
+    
+    const texLoader = new THREE.TextureLoader();
 	/* Advanced Robot Bobby end YT create the earth with TSL 2.56m 
 	function loadTexture(path, srbg = false) {
 	  const tex = texLoader.load(path);
