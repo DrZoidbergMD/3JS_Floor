@@ -37,7 +37,7 @@
 <body>
 <div id="envMapProg" class="divStyle">Loading: 0%</div>
 <script type="module">
-    // CDA modified Gem Shadow GIT v3.0.html renamed index.html
+    // CDA modified Gem Shadow GIT v3.01.html renamed index.html
 	
     import * as THREE from 'three';
     import { OrbitControls } from 'OrbitControls';
@@ -653,23 +653,27 @@
 
 	// --- BACK WALL ---
 	const backWall = new THREE.Mesh(wallGeo, solidWallMat);
+	backWall.receiveShadow = true; // backWall.castShadow = true; 
 	backWall.position.set(0, 5, -10); // Up 5 (half height), pushed back 10
 	scene.add(backWall);
 
 	// --- LEFT WALL (With Window) ---
 	const leftWall = new THREE.Mesh(wallGeo, windowWallMat);
+	leftWall.receiveShadow = true; // leftWall.castShadow = true; 
 	leftWall.rotation.y = Math.PI / 2; // Rotate 90 degrees
 	leftWall.position.set(-10, 5, 0);  // Push left 10, up 5
 	scene.add(leftWall);
 
 	// --- RIGHT WALL (With Window) ---
 	const rightWall = new THREE.Mesh(wallGeo, windowWallMat);
+	rightWall.receiveShadow = true; // rightWall.castShadow = true; 
 	rightWall.rotation.y = -Math.PI / 2; // Rotate -90 degrees
 	rightWall.position.set(10, 5, 0);    // Push right 10, up 5
 	scene.add(rightWall);
 
 	// --- CEILING ---
 	const ceiling = new THREE.Mesh(ceilingGeo, solidWallMat);
+	ceiling.receiveShadow = true; // ceiling.castShadow = true; 
 	ceiling.rotation.x = Math.PI / 2; // Lay flat
 	ceiling.position.set(0, 10, 0);   // Move to top of walls
 	scene.add(ceiling);
