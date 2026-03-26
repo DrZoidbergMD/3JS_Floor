@@ -630,6 +630,9 @@
 	
 	// The black and white image defining where the window is
 	const windowAlphaTex = texLoader.load('./walls/alpha_test_window_Crop_590.jpg');
+	const leftWindowAlphaTex = texLoader.load('./walls/alpha_test_window_Crop_590.jpg');
+
+	const leftWallTex = texLoader.load('./walls/MaxErnst_A1Z.jpeg'); 
 
 	const ceilingTex = texLoader.load('./walls/IMG_3872.JPG'); 
 //	ceilingTex.wrapS = THREE.RepeatWrapping;
@@ -652,6 +655,14 @@
 		side: THREE.DoubleSide
 	});
 	
+	const leftWallMat = new THREE.MeshStandardMaterial({
+		map: leftWallTex,
+		alphaMap: leftWindowAlphaTex,
+		transparent: true,      // REQUIRED for alphaMap to work
+		alphaTest: 0.5,         // Keeps shadows looking clean through the window hole
+		side: THREE.DoubleSide
+	});
+	
 	// Ceiling (Solid Wallpaper)
 	const solidCeilingMat = new THREE.MeshStandardMaterial({
 		map: ceilingTex,
@@ -669,7 +680,7 @@
 	scene.add(backWall);
 
 	// --- LEFT WALL (With Window) ---
-	const leftWall = new THREE.Mesh(wallGeo, windowWallMat);
+	const leftWall = new THREE.Mesh(wallGeo, leftWallMat);
 	leftWall.receiveShadow = true; // leftWall.castShadow = true; 
 	leftWall.rotation.y = Math.PI / 2; // Rotate 90 degrees
 	leftWall.position.set(-10, 5, 0);  // Push left 10, up 5
