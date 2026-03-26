@@ -622,11 +622,13 @@
 	//
 	const texLoader = new THREE.TextureLoader();
 	// Your wallpaper pattern
-	const wallPaperTex = texLoader.load('./walls/arabic-design_240.jpg'); 
+//	const wallPaperTex = texLoader.load('./walls/arabic-design_240.jpg'); 
+	const wallPaperTex = texLoader.load('./walls/IMG_4432_tile.JPG'); 
 	// Optional: Repeat the texture so it doesn't stretch massively
 	wallPaperTex.wrapS = THREE.RepeatWrapping;
 	wallPaperTex.wrapT = THREE.RepeatWrapping;
-	wallPaperTex.repeat.set(4, 2); 
+//	wallPaperTex.repeat.set(4, 2); 
+	wallPaperTex.repeat.set(8, 4); 
 	
 	// The black and white image defining where the window is
 	const windowAlphaTex = texLoader.load('./walls/alpha_test_window_Crop_590.jpg');
