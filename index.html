@@ -250,10 +250,22 @@
     const myRPCntlr = fFolder.add( guiObj, 'randomizeColors').name('Randomize Palette'); // NEW BUTTON
     
     const myRotCntlr = fFolder.add( guiObj, 'colRot').name('Rot Colors').listen();
+	
+	myRotCntlr.onChange(value => {
+      if (value === 0) {      // no rotation
+	    myRotCntlr.name('Rot Colors');
+        myHUCntlr.hide();
+      } else {    // Color Rotation
+	    myRotCntlr.name('Freeze Colors');
+        myHUCntlr.show();
+      }
+    });
+	/*
     myRotCntlr.onChange(value => {
       myRotCntlr.name(value ? 'Freeze Colors' : ' Rot Colors');
     });
-    
+    */
+	
     const myHUCntlr = fFolder.add( guiObj, 'hueSpeed', 0.0, 2.0, 0.1 ).name('Hue Rot Speed');
     
     const myRipCntlr = gui.add( guiObj, 'myBoolean').name('Freeze Rip').listen();
