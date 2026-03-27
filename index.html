@@ -269,7 +269,7 @@
     gui.add( guiObj, 'gridDensity', 5.0, 30.0, 5.0 ).name('Grid Density');
     // Trigger the logic to set initial visibility states
     myPrgCntlr.setValue(1);
-    myCMCntlr.setValue(0);
+	myCMCntlr.setValue(0);
     
     // --- 1. VERTEX SHADER GLSL (Geometry) ---
     let vertexPars, vertexMain, fragmentPars, fragmentMain;
@@ -635,7 +635,8 @@
 	const leftWindowAlphaTex = texLoader.load('./walls/MaxErnstWindow_A1Z.jpeg');
 
 	const leftWallTex = texLoader.load('./walls/MaxErnst_A1Z.jpeg'); 
-
+    const farWallTex = texLoader.load('./walls/far_Wall.JPG'); 
+	
 	const ceilingTex = texLoader.load('./walls/IMG_3872.JPG'); 
 //	ceilingTex.wrapS = THREE.RepeatWrapping;
 //	ceilingTex.wrapT = THREE.RepeatWrapping;
@@ -644,11 +645,11 @@
 	// 2. CREATE MATERIALS
 	// Back Wall (Solid Wallpaper)
 	const solidWallMat = new THREE.MeshStandardMaterial({
-		map: wallPaperTex,
+		map: farWallTex,
 		side: THREE.DoubleSide // Ensures it renders no matter which way it faces
 	});
 
-	// Left & Right Walls (Wallpaper + Window Hole)
+	// Right Walls (Wallpaper + Window Hole)
 	const windowWallMat = new THREE.MeshStandardMaterial({
 		map: wallPaperTex,
 		alphaMap: windowAlphaTex,
