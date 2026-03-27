@@ -953,13 +953,6 @@
 		// stars.rotation.y -= 0.0002;
 		moonGroup.rotation.y += 0.01;
   
-    if (guiObj.animMode === 1) { currentMix = loopProgress; } 
-    else if (guiObj.animMode === 2) { currentMix = 1.0 - loopProgress; } 
-    else if (guiObj.animMode === 3) { currentMix = 1.0 - Math.abs((loopProgress * 2.0) - 1.0); }
-    else if (guiObj.animMode === 4) { currentAlpha = 1.0 - loopProgress; } 
-    else if (guiObj.animMode === 5) { currentAlpha = loopProgress; }       
-    else if (guiObj.animMode === 6) { currentAlpha = Math.abs((loopProgress * 2.0) - 1.0); }
-
         // 2. FADE LOGIC
         let currentMix = 1.0; // Default to full color (Static Mode 0)
 		let currentAlpha = 1.0; 
