@@ -37,8 +37,9 @@
 <body>
 <div id="envMapProg" class="divStyle">Loading: 0%</div>
 <script type="module">
-    // CDA modified Gem Shadow GIT v3.01.html renamed index.html
-	
+    // CDA modified Gem Shadow GIT v3.2.html renamed index.html
+	// TODO: Transparency fades
+	// TODO: SDF Light dropping from ceiling
     import * as THREE from 'three';
     import { OrbitControls } from 'OrbitControls';
     import GUI from 'lil-gui';
@@ -243,8 +244,12 @@
        'Static (Full Color)': 0, 
        'Fade Up (BW->Col)': 1, 
        'Fade Down (Col->BW)': 2, 
-       'Pulse (BW->Col->BW)': 3 
+       'Pulse (BW->Col->BW)': 3,
+       'Fade Out (Solid->Trans)': 4,
+       'Fade In (Trans->Solid)': 5,
+       'Glass Pulse (Solid->Trans->Solid)': 6
     }).name('Anim Mode');
+	
     const myFTCntrl = fFolder.add(guiObj, 'fadeTime', 1.0, 20.0,1.0).name('Loop Time (s)');
     
     const myRPCntlr = fFolder.add( guiObj, 'randomizeColors').name('Randomize Palette'); // NEW BUTTON
@@ -516,19 +521,21 @@
       // 5. Inject into Three.js Diffuse Color
       // This overrides the standard material color
       diffuseColor.rgb = finalColor;
+      diffuseColor.a = uAlphaMix; // Inject the transparency
     `;
     }
     // --- MATERIAL SETUP ---
     const geoFlr = new THREE.PlaneGeometry(20, 20, 150, 150); 
     
     // We don't need a texture map anymore! GPU generates it.
-    const matFlr = new THREE.MeshStandardMaterial({ 
+	const matFlr = new THREE.MeshStandardMaterial({ 
         roughness: 0.4,
         metalness: 0.1,
         side: THREE.DoubleSide,
-        color: 0xffffff // Base white, will be overridden by shader
+        color: 0xffffff,
+        transparent: true // REQUIRED: Enables the Alpha channel
     });
-
+    
     const depthMatFlr = new THREE.MeshDepthMaterial({
         depthPacking: THREE.RGBADepthPacking
     });
@@ -550,6 +557,7 @@
       uRandCol1: { value: new THREE.Color(1, 0, 1) }, // Magenta
       uRandCol2: { value: new THREE.Color(0, 1, 0) },  // Green
       uMixVal: { value: 1.0 } // Start visible
+	  uAlphaMix: { value: 1.0 } // NEW: Controls opacity
     };
     
     // --- SHADER INJECTION FUNCTION ---
@@ -567,7 +575,8 @@
         shader.uniforms.uColorMode = customUniforms.uColorMode;
         shader.uniforms.uRandCol1 = customUniforms.uRandCol1;
         shader.uniforms.uRandCol2 = customUniforms.uRandCol2;
-        shader.uniforms.uMixVal = customUniforms.uMixVal;            // cda guess
+        shader.uniforms.uMixVal = customUniforms.uMixVal;            
+        shader.uniforms.uAlphaMix = customUniforms.uAlphaMix; // Map the new uniform 
 
         // Inject Vertex Logic (Geometry)
         shader.vertexShader = shader.vertexShader.replace('#include <common>', 
@@ -942,9 +951,17 @@
         if (lightsMesh) lightsMesh.rotation.y += 0.002;
 		// stars.rotation.y -= 0.0002;
 		moonGroup.rotation.y += 0.01;
-		
+  
+    if (guiObj.animMode === 1) { currentMix = loopProgress; } 
+    else if (guiObj.animMode === 2) { currentMix = 1.0 - loopProgress; } 
+    else if (guiObj.animMode === 3) { currentMix = 1.0 - Math.abs((loopProgress * 2.0) - 1.0); }
+    else if (guiObj.animMode === 4) { currentAlpha = 1.0 - loopProgress; } 
+    else if (guiObj.animMode === 5) { currentAlpha = loopProgress; }       
+    else if (guiObj.animMode === 6) { currentAlpha = Math.abs((loopProgress * 2.0) - 1.0); }
+
         // 2. FADE LOGIC
         let currentMix = 1.0; // Default to full color (Static Mode 0)
+		let currentAlpha = 1.0; 
         // Calculate a 0.0-1.0 progress bar based on time and fadeTime
         // This creates a perfect loop every 'fadeTime' seconds
         var loopProgress = (time % guiObj.fadeTime) / guiObj.fadeTime;
@@ -964,6 +981,9 @@
           // This math converts 0->1 linear line into a 0->1->0 triangle
           currentMix = 1.0 - Math.abs((loopProgress * 2.0) - 1.0); 
         }
+        else if (guiObj.animMode === 4) { currentAlpha = 1.0 - loopProgress; } 
+        else if (guiObj.animMode === 5) { currentAlpha = loopProgress; }       
+        else if (guiObj.animMode === 6) { currentAlpha = Math.abs((loopProgress * 2.0) - 1.0); }
         
         // 1. Update Uniforms
         customUniforms.uTime.value = time;
@@ -974,6 +994,7 @@
         customUniforms.uGridDensity.value = guiObj.gridDensity;
         customUniforms.uColorMode.value = guiObj.colorMode;
         customUniforms.uMixVal.value = currentMix;
+		customUniforms.uAlphaMix.value = currentAlpha;
 
         // 2. Flight Logic
         if (guiObj.subProg == 3) {
