@@ -37,9 +37,9 @@
 <body>
 <div id="envMapProg" class="divStyle">Loading: 0%</div>
 <script type="module">
-    // CDA modified Gem Shadow GIT v3.2.html renamed index.html
-	// TODO: Transparency fades
+    // CDA modified Gem Shadow GIT v3.3.html renamed index.html
 	// TODO: SDF Light dropping from ceiling
+	// TODO: Animation mode and Loop Time should be available for all color modes
     import * as THREE from 'three';
     import { OrbitControls } from 'OrbitControls';
     import GUI from 'lil-gui';
@@ -161,7 +161,7 @@
         flySpeed: 0.5,
         ripSize: 3.0,
         ripFreq: 3.0,
-        myBoolean: false,   // Freeze Rip
+        freezeRip: false,   // Freeze Rip
         colorMode: 0,       // 0 = B&W, 1 = Color (Algorithmic), 2=Random
         hueSpeed: 0.5,      // Speed of color rotation
         gridDensity: 10.0,  // How many squares
@@ -222,20 +222,20 @@
         myRPCntlr.show();
         myRotCntlr.hide();
         myHUCntlr.hide();
-        myAMCntlr.show();
-        myFTCntrl.show();
+//        myAMCntlr.show();
+//        myFTCntrl.show();
       } else {    
         myRPCntlr.hide();
         if (value === 1) {    // 1 = colour
           myRotCntlr.show();
           myHUCntlr.show();
-          myAMCntlr.show();
-          myFTCntrl.show();
+//          myAMCntlr.show();
+//          myFTCntrl.show();
         } else {              // 0 = B&W
           myRotCntlr.hide();
           myHUCntlr.hide();
-          myAMCntlr.hide();
-          myFTCntrl.hide();
+//          myAMCntlr.hide();
+//          myFTCntrl.hide();
         }
       }
     });
@@ -254,29 +254,29 @@
     
     const myRPCntlr = fFolder.add( guiObj, 'randomizeColors').name('Randomize Palette'); // NEW BUTTON
     
-    const myRotCntlr = fFolder.add( guiObj, 'colRot').name('Rot Colors').listen();
+    const myRotCntlr = fFolder.add( guiObj, 'colRot').name('Rotate Colors').listen();
 	myRotCntlr.onChange(value => {
       if (value===false) {      // no rotation
 //	  	debugger;
-	    myRotCntlr.name('Rot Colors');
+//	    myRotCntlr.name('Rotate Colors');
         myHUCntlr.hide();
       } else {    // Color Rotation
 //		debugger;
-	    myRotCntlr.name('Freeze Colors');
+//	    myRotCntlr.name('Freeze Colors');
         myHUCntlr.show();
       }
     });	
     const myHUCntlr = fFolder.add( guiObj, 'hueSpeed', 0.0, 2.0, 0.1 ).name('Hue Rot Speed');
     
-    const myRipCntlr = gui.add( guiObj, 'myBoolean').name('Freeze Rip').listen();
-    myRipCntlr.onChange(value => {
-      myRipCntlr.name(value ? 'Move Rip' : 'Freeze Rip');
-    });
+    const myRipCntlr = gui.add( guiObj, 'freezeRip').name('Freeze Ripple').listen();
+//    myRipCntlr.onChange(value => {
+//      myRipCntlr.name(value ? 'Move Rip' : 'Freeze Rip');
+//    });
     
-    const mySpotCntlr = gui.add( guiObj, 'freezeSpot').name('Freeze Spot').listen();
-    mySpotCntlr.onChange(value => {
-      mySpotCntlr.name(value ? 'Move Spot' : 'Freeze Spot');
-    });
+    const mySpotCntlr = gui.add( guiObj, 'freezeSpot').name('Freeze Spotlight').listen();
+//    mySpotCntlr.onChange(value => {
+//      mySpotCntlr.name(value ? 'Move Spot' : 'Freeze Spot');
+//    });
     
     gui.add( guiObj, 'gridDensity', 5.0, 30.0, 5.0 ).name('Grid Density');
     // Trigger the logic to set initial visibility states
@@ -533,7 +533,7 @@
         roughness: 0.4,
         metalness: 0.1,
         side: THREE.DoubleSide,
-        color: 0xffffff,
+        color: 0xffffff, // Base white, will be overridden by shader
         transparent: true // REQUIRED: Enables the Alpha channel
     });
     
@@ -984,7 +984,7 @@
         customUniforms.uProg.value = guiObj.subProg;
         customUniforms.uRipSize.value = guiObj.ripSize;
         customUniforms.uRipFreq.value = guiObj.ripFreq;
-        customUniforms.uFreezeRip.value = guiObj.myBoolean;
+        customUniforms.uFreezeRip.value = guiObj.freezeRip;
         customUniforms.uGridDensity.value = guiObj.gridDensity;
         customUniforms.uColorMode.value = guiObj.colorMode;
         customUniforms.uMixVal.value = currentMix;
