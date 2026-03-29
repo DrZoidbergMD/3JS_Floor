@@ -37,9 +37,8 @@
 <body>
 <div id="envMapProg" class="divStyle">Loading: 0%</div>
 <script type="module">
-    // CDA modified Gem Shadow GIT v3.3.html renamed index.html
+    // CDA modified Gem Shadow GIT v3.31.html renamed index.html
 	// TODO: SDF Light dropping from ceiling
-	// TODO: Animation mode and Loop Time should be available for all color modes
     import * as THREE from 'three';
     import { OrbitControls } from 'OrbitControls';
     import GUI from 'lil-gui';
@@ -850,6 +849,142 @@
     moonGroup.add(moonMesh);
 	moonGroup.scale.setScalar(300);
 	
+	// ##################################################################################################
+
+	// --- SDF DRIPPING SPHERES SETUP ---
+
+    const dripUniforms = {
+        uTime: { value: 0.0 }
+    };
+
+    const dripVertexShader = `
+        varying vec3 vWorldPosition;
+        void main() {
+            vec4 worldPosition = modelMatrix * vec4(position, 1.0);
+            vWorldPosition = worldPosition.xyz;
+            gl_Position = projectionMatrix * viewMatrix * worldPosition;
+        }
+    `;
+
+    const dripFragmentShader = `
+        uniform float uTime;
+        varying vec3 vWorldPosition;
+
+        // smin (Polynomial smooth minimum) - Creates the gooey tension
+        float smin(float a, float b, float k) {
+            float h = clamp(0.5 + 0.5 * (b - a) / k, 0.0, 1.0);
+            return mix(b, a, h) - k * h * (1.0 - h);
+        }
+        // Scene mapping
+        vec2 map(vec3 p) {            
+		// Ceiling is y=10. Sphere diameter is 3.0 (radius 1.5).
+            // Half diameter below ceiling = 1.5 gap. 
+            // So top of sphere is 8.5. Center is at 7.0.
+            float d1 = length(p - vec3(0.0, 7.0, 0.0)) - 1.5;
+
+            // Falling sphere loops from y=7.0 down to y=0.0
+            float fallSpeed = 2.0;
+            float fallY = 7.0 - mod(uTime * fallSpeed, 7.0);
+            float d2 = length(p - vec3(0.0, fallY, 0.0)) - 0.7;  // Smaller drop
+
+            // Blend them together
+            float d = smin(d1, d2, 1.8); // 1.8 is the "goo" factor
+
+            return vec2(d, fallY);
+        }
+
+        // Calculate normals for lighting
+        vec3 calcNormal(vec3 p) {
+            const vec2 e = vec2(0.01, 0.0);
+            return normalize(vec3(
+                map(p + e.xyy).x - map(p - e.xyy).x,
+                map(p + e.yxy).x - map(p - e.yxy).x,
+                map(p + e.yyx).x - map(p - e.yyx).x
+            ));
+        }
+
+        void main() {
+            vec3 ro = cameraPosition;
+            vec3 rd = normalize(vWorldPosition - cameraPosition);
+
+            float t = 0.0;
+            float maxD = 40.0;
+            float hitFallY = 0.0;
+
+            // Raymarching loop
+            for(int i = 0; i < 64; i++) {
+                vec3 p = ro + rd * t;
+                vec2 res = map(p);
+                float d = res.x;
+                hitFallY = res.y;
+                
+                if(abs(d) < 0.001 || t > maxD) break;
+                t += d;
+            }
+
+            if(t < maxD) {
+                // We hit the sphere!
+                vec3 p = ro + rd * t;
+                vec3 n = calcNormal(p);
+
+                // Basic directional lighting
+                vec3 lightDir = normalize(vec3(1.0, 1.0, 1.0));
+                float diff = max(dot(n, lightDir), 0.0);
+                float ambient = 0.2;
+
+                // Color calculation based on height
+                // Starts white, maps to yellow, then red
+                // float heatMap = clamp(1.0 - (hitFallY / 10.0), 0.0, 1.0);
+				
+				// 2. NEW COLOR LOGIC (Based on actual pixel height, not drop height)
+                // The static sphere's bottom is roughly at y=5.5
+                // We start the color transition strictly below y=5.0
+                float heatMap = clamp((5.0 - p.y) / 5.0, 0.0, 1.0);
+
+                vec3 colorWhite = vec3(1.0, 1.0, 1.0);
+                vec3 colorYellow = vec3(1.0, 0.8, 0.0);
+                vec3 colorRed = vec3(1.0, 0.0, 0.0);
+
+                vec3 finalColor;
+				if(heatMap <= 0.0) {
+                    finalColor = colorWhite; // Everything above y=5 is pure white
+                } else if(heatMap < 0.5) {
+                    finalColor = mix(colorWhite, colorYellow, heatMap * 2.0);
+                } else {
+                    finalColor = mix(colorYellow, colorRed, (heatMap - 0.5) * 2.0);
+                }
+
+				// Add bloom/emissive brightness + 3D shading
+                vec3 glow = finalColor * (diff + ambient) + (finalColor * 0.4);
+
+                gl_FragColor = vec4(glow, 1.0);
+            } else {
+                // We hit nothing, discard pixel so background shows
+                discard; 
+            }
+        }
+    `;
+
+    // The Proxy Volume (Must be big enough to contain the SDF math without clipping)
+    const dripGeo = new THREE.BoxGeometry(6, 12, 6);
+    const dripMat = new THREE.ShaderMaterial({
+        vertexShader: dripVertexShader,
+        fragmentShader: dripFragmentShader,
+        uniforms: dripUniforms,
+        transparent: true,
+        side: THREE.DoubleSide
+    });
+    
+    const dripMesh = new THREE.Mesh(dripGeo, dripMat);
+    dripMesh.position.set(0, 5, 0); // Center of the room
+    dripMesh.castShadow = false; // The invisible box shouldn't cast shadows
+    scene.add(dripMesh);
+
+    // Add a real Three.js PointLight that syncs with the shader to light up the floor
+    const dripLight = new THREE.PointLight(0xffffff, 20, 15);
+    scene.add(dripLight);
+	// ##################################################################################################
+
     // --- ANIMATION LOOP ---
     const clock = new THREE.Clock();
     
@@ -939,7 +1074,10 @@
     (error) => {
       console.error("An error occurred:", error);
     });
-    
+	// Note: The clamp function might not be defined natively in pure JS in your scope, 
+    // so you can add this helper outside your animate loop:
+    const clamp = (num, min, max) => Math.min(Math.max(num, min), max);
+
     function animate() {
         requestAnimationFrame(animate);
         const delta = clock.getDelta();                               
@@ -1025,7 +1163,32 @@
         }
         spotLight.position.set(lx, ly, 2.5); 
         torus.position.set(lx, ly, 2.5); 
-     
+		
+		// Update Drip Shader time
+        dripUniforms.uTime.value = time;
+
+        // Sync physical PointLight to the falling sphere
+//        let fallY = 10.0 - ((time * 2.0) % 10.0);
+		let fallY = 7.0 - ((time * 2.0) % 7.0);
+        dripLight.position.set(0, fallY, 0);
+
+        // Map PointLight Color (White -> Yellow -> Red)
+		
+		// Sync PointLight Color to match the new shader height threshold
+        // let heat = clamp(1.0 - (fallY / 10.0), 0.0, 1.0);
+        let heat = clamp((5.0 - fallY) / 5.0, 0.0, 1.0);
+        let r = 1.0;
+        let g = heat < 0.5 ? 1.0 - (heat * 0.4) : 0.8 - ((heat - 0.5) * 1.6);
+        let b = heat < 0.5 ? 1.0 - (heat * 2.0) : 0.0;
+        
+        // dripLight.color.setRGB(r, Math.max(0, g), Math.max(0, b));
+        // If it's high up, keep the physical light pure white
+        if (heat <= 0.0) {
+            dripLight.color.setRGB(1.0, 1.0, 1.0);
+        } else {
+            dripLight.color.setRGB(r, Math.max(0, g), Math.max(0, b));
+        }
+		
         renderer.render(scene, camera);
     }
     animate();
