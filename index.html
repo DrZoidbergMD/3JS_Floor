@@ -37,7 +37,7 @@
 <body>
 <div id="envMapProg" class="divStyle">Loading: 0%</div>
 <script type="module">
-    // CDA modified Gem Shadow GIT v3.31.html renamed index.html
+    // CDA modified Gem Shadow GIT v3.32.html renamed index.html
 	// TODO: SDF Light dropping from ceiling
     import * as THREE from 'three';
     import { OrbitControls } from 'OrbitControls';
@@ -250,32 +250,19 @@
     }).name('Anim Mode');
 	
     const myFTCntrl = fFolder.add(guiObj, 'fadeTime', 1.0, 20.0,1.0).name('Loop Time (s)');
-    
     const myRPCntlr = fFolder.add( guiObj, 'randomizeColors').name('Randomize Palette'); // NEW BUTTON
-    
     const myRotCntlr = fFolder.add( guiObj, 'colRot').name('Rotate Colors').listen();
 	myRotCntlr.onChange(value => {
       if (value===false) {      // no rotation
 //	  	debugger;
-//	    myRotCntlr.name('Rotate Colors');
         myHUCntlr.hide();
       } else {    // Color Rotation
-//		debugger;
-//	    myRotCntlr.name('Freeze Colors');
         myHUCntlr.show();
       }
     });	
     const myHUCntlr = fFolder.add( guiObj, 'hueSpeed', 0.0, 2.0, 0.1 ).name('Hue Rot Speed');
-    
     const myRipCntlr = gui.add( guiObj, 'freezeRip').name('Freeze Ripple').listen();
-//    myRipCntlr.onChange(value => {
-//      myRipCntlr.name(value ? 'Move Rip' : 'Freeze Rip');
-//    });
-    
     const mySpotCntlr = gui.add( guiObj, 'freezeSpot').name('Freeze Spotlight').listen();
-//    mySpotCntlr.onChange(value => {
-//      mySpotCntlr.name(value ? 'Move Spot' : 'Freeze Spot');
-//    });
     
     gui.add( guiObj, 'gridDensity', 5.0, 30.0, 5.0 ).name('Grid Density');
     // Trigger the logic to set initial visibility states
@@ -624,7 +611,25 @@
     cube.position.set(0, 2, 0);
     cube.castShadow = true; 
     scene.add(cube);
-  
+	// light rose
+	const cylinder1 = new THREE.Mesh(
+	  new THREE.CylinderGeometry(5,5,1.25,18,1),
+      new THREE.MeshStandardMaterial({ color: 0xeeeeee })
+	);
+	cylinder1.position.set(0,8.75,0);
+	cylinder1.castShadow = true;
+	cylinder1.scale.setScalar(.5);
+	scene.add(cylinder1);
+	//light wire
+	const cylinder2 = new THREE.Mesh(
+	  new THREE.CylinderGeometry(.5,.5,10,8,8),
+      new THREE.MeshStandardMaterial({ color: 0xdddddd })
+	);
+	cylinder2.position.set(0,10,0);
+	cylinder2.castShadow = true;
+	cylinder2.scale.setScalar(.5);
+	scene.add(cylinder2);
+	
     const torus = new THREE.Mesh( 
         new THREE.TorusGeometry( .25, .1, 12, 48 ), 
         new THREE.MeshNormalMaterial() 
@@ -643,7 +648,6 @@
 	// Optional: Repeat the texture so it doesn't stretch massively
 	wallPaperTex.wrapS = THREE.RepeatWrapping;
 	wallPaperTex.wrapT = THREE.RepeatWrapping;
-//	wallPaperTex.repeat.set(4, 2); 
 	wallPaperTex.repeat.set(8, 4); 
 	
 	// The black and white image defining where the window is
@@ -720,7 +724,7 @@
 	ceiling.position.set(0, 10, 0);   // Move to top of walls
 	scene.add(ceiling);
 
-// Notice: We simply don't create a front wall!
+    // Notice: We simply don't create a front wall!
 
     // --- ADVANCED EARTH SETUP ---
     const earthGroup = new THREE.Group();
@@ -763,7 +767,6 @@
 
     // 1. EARTH BASE (Phong)
 	/*
-	      
       map: texLoader.load('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_atmos_2048.jpg'),
       specularMap: texLoader.load('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_specular_2048.jpg'),
       bumpMap: texLoader.load('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/planets/earth_normal_2048.jpg'),
@@ -849,14 +852,11 @@
     moonGroup.add(moonMesh);
 	moonGroup.scale.setScalar(300);
 	
-	// ##################################################################################################
-
 	// --- SDF DRIPPING SPHERES SETUP ---
-
     const dripUniforms = {
         uTime: { value: 0.0 }
     };
-
+    {
     const dripVertexShader = `
         varying vec3 vWorldPosition;
         void main() {
@@ -964,7 +964,7 @@
             }
         }
     `;
-
+    }
     // The Proxy Volume (Must be big enough to contain the SDF math without clipping)
     const dripGeo = new THREE.BoxGeometry(6, 12, 6);
     const dripMat = new THREE.ShaderMaterial({
@@ -983,7 +983,6 @@
     // Add a real Three.js PointLight that syncs with the shader to light up the floor
     const dripLight = new THREE.PointLight(0xffffff, 20, 15);
     scene.add(dripLight);
-	// ##################################################################################################
 
     // --- ANIMATION LOOP ---
     const clock = new THREE.Clock();
@@ -1023,33 +1022,22 @@
 		fileTot = 8388673;
 	}
       const rgbeLoader = new RGBELoader();
-    // Robot Bobby code Using a known CORS-friendly space HDR from Poly Haven
+    {
+    // Robot Bobby code  Using a known CORS-friendly space HDR from Poly Haven
     // rgbeLoader.load('https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/starmap_2020_1k.hdr', (hdr) => {
-    // rgbeLoader.load('https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/starmap_2020_1k.hdr', (hdr) => {
-	
-//     rgbeLoader.load('./resources/HDR_asteroid_field_2k.hdr',  (hdr) => {
-//    Gem Thinker version of line above 
-     // rgbeLoader.load('resources/HDR_asteroid_field_2k.hdr',  (hdr) => {
-	 rgbeLoader.load('resources/HDR_asteroid_field_4k.hdr', (hdr) => {
-	 // try RAW method - I never included main folder in previous links
+    
+	 // RAW method 
 	 // rgbeLoader.load('https://raw.githubusercontent.com/DrZoidbergMD/3JS_Floor/main/resources/HDR_asteroid_field_2k.hdr',  (hdr) => {
-
-	// Initial Google Drive method attempts
-//	rgbeLoader.load('https://drive.google.com/uc?export=download&id=15lJYiSCl28jI80nFe3iMXVlfLOY-5vvL',  (hdr) => {  // 2k version     8Mb
-//	rgbeLoader.load('https://drive.google.com/uc?export=download&id=1ZOKFYb51oM2LBwUxcPZ3p1q75csOqb8F',  (hdr) => {  // 4k version    32Mb
-//	rgbeLoader.load('https://drive.google.com/uc?export=download&id=1k4NwrOcPJrZIai7U1FKLTC1vNxnWXN9y',  (hdr) => {  // 8k version    64Mb
-
-	// Release method attempts
-//    rgbeLoader.load('https://github.com/DrZoidbergMD/3JS_Floor/releases/download/v0.1/Assets/HDR_asteroid_field_2k.hdr',  (hdr) => {  // 8k version    64Mb
-//   Line below uses copied link from Releases folder
-//   rgbeLoader.load('https://github.com/DrZoidbergMD/3JS_Floor/releases/download/v0.1/HDR_asteroid_field_2k.hdr',  (hdr) => {  // 2k version    8Mb
-//     rgbeLoader.load('https://github.com/DrZoidbergMD/3JS_Floor/releases/download/v0.2/HDR_asteroid_field_4k.hdr',  (hdr) => {  // 4k version   33Mb
+	 // Google Drive method 
+     //	rgbeLoader.load('https://drive.google.com/uc?export=download&id=15lJYiSCl28jI80nFe3iMXVlfLOY-5vvL',  (hdr) => {  // 2k version     8Mb
+	 // Release method, copied link from Releases folder
+     // rgbeLoader.load('https://github.com/DrZoidbergMD/3JS_Floor/releases/download/v0.1/HDR_asteroid_field_2k.hdr',  (hdr) => {  // 2k version    8Mb
+     // rgbeLoader.load('https://github.com/DrZoidbergMD/3JS_Floor/releases/download/v0.2/HDR_asteroid_field_4k.hdr',  (hdr) => {  // 4k version   33Mb
      // using Pages ?
-//    rgbeLoader.load('https://drzoidbergmd.github.io/3JS_Floor/releases/download/v0.1/Assets/HDR_asteroid_field_2k.hdr',  (hdr) => {  // 8k version    64Mb
-
-
-//    rgbeLoader.crossOrigin = null;
-
+     // rgbeLoader.load('https://drzoidbergmd.github.io/3JS_Floor/releases/download/v0.1/Assets/HDR_asteroid_field_2k.hdr',  (hdr) => {  // 8k version    64Mb
+     // rgbeLoader.crossOrigin = null;
+     }
+	rgbeLoader.load('resources/HDR_asteroid_field_4k.hdr', (hdr) => {
     hdr.mapping = THREE.EquirectangularReflectionMapping;
     scene.background = hdr;
     scene.environment = hdr;
