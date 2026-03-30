@@ -856,8 +856,10 @@
     const dripUniforms = {
         uTime: { value: 0.0 }
     };
+	
+	let dripVertexShader,dripFragmentShader;
     {
-    const dripVertexShader = `
+    dripVertexShader = `
         varying vec3 vWorldPosition;
         void main() {
             vec4 worldPosition = modelMatrix * vec4(position, 1.0);
@@ -866,7 +868,7 @@
         }
     `;
 
-    const dripFragmentShader = `
+    dripFragmentShader = `
         uniform float uTime;
         varying vec3 vWorldPosition;
 
