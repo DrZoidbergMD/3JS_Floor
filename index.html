@@ -37,7 +37,7 @@
 <body>
 <div id="envMapProg" class="divStyle">Loading: 0%</div>
 <script type="module">
-    // CDA modified Gem Shadow GIT v3.33.html renamed index.html
+    // CDA modified Gem Shadow GIT v3.34.html renamed index.html
 	// TODO: SDF Light dropping from ceiling
     import * as THREE from 'three';
     import { OrbitControls } from 'OrbitControls';
@@ -169,6 +169,7 @@
         // Fade animation 
         animMode: 0,         // 0=Static, 1=Fade Up, 2=Fade Down, 3=Pulse
         fadeTime: 10.0,      // Seconds for a full loop
+        showSpace: true,     // Toggle Earth Moon
         randomizeColors: function() {
             // Light Squares: Range 56 to 255
             // (Math.random() * 199) + 56 ensures we fall in that range
@@ -265,6 +266,9 @@
     const mySpotCntlr = gui.add( guiObj, 'freezeSpot').name('Freeze Spotlight').listen();
     
     gui.add( guiObj, 'gridDensity', 5.0, 30.0, 5.0 ).name('Grid Density');
+		
+	gui.add(guiObj, 'showSpace').name('Show Earth/Moon').onChange((value) => {spaceGroup.visible = value;});
+	
     // Trigger the logic to set initial visibility states
     myPrgCntlr.setValue(1);
 	myCMCntlr.setValue(0);
@@ -851,7 +855,15 @@
     moonMesh.scale.setScalar(0.27);
     moonGroup.add(moonMesh);
 	moonGroup.scale.setScalar(300);
+		// Create a top level container
+    const spaceGroup = new THREE.Group();
+    scene.add(spaceGroup);
+
+   // Add your existing groups to it
+   spaceGroup.add(earthGroup);
+   spaceGroup.add(moonGroup);
 	
+
 	// --- SDF DRIPPING SPHERES SETUP ---
     const dripUniforms = {
         uTime: { value: 0.0 }
