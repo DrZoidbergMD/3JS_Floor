@@ -29,7 +29,7 @@
         "lil-gui": "https://unpkg.com/lil-gui@0.19.1/dist/lil-gui.esm.min.js",
         "jsm/": "https://cdn.jsdelivr.net/npm/three@0.167/examples/jsm/",
         "EXRLoader": "https://unpkg.com/three@0.160.0/examples/jsm/loaders/EXRLoader.js",
-        "RGBELoader": "https://unpkg.com/three@0.160.0/examples/jsm/loaders/RGBELoader.js"
+        "RGBELoader": "https://unpkg.com/three@0.160.0/examples/jsm/loaders/RGBELoader.js" 
        }
       }
     </script>
@@ -37,14 +37,20 @@
 <body>
 <div id="envMapProg" class="divStyle">Loading: 0%</div>
 <script type="module">
-    // CDA modified Gem Shadow GIT v3.41.html renamed index.html
-	// TODO: Splash to match SDF Light dropping from ceiling
+    // CDA modified Gem Shadow GIT v3.42.html renamed index.html
+	// TODO: Add thickness to left and right walls
+	// TODO: Import models. a) low sofa against left wall b) low coffee table c) wall mounted TV on far wall
+	// TODO: Load Cessna 3D model plane onto table
+	// TODO: Create fight path for plane to orbit light in room. Lorrenz attractor?
+	// TODO: Animate plane a) props b) exhaust 
+	// TODO: Animate plane c) basic path d) Advanced path using pitch roll yaw. Quaternions?
     import * as THREE from 'three';
     import { OrbitControls } from 'OrbitControls';
     import GUI from 'lil-gui';
     import { UltraHDRLoader } from 'jsm/loaders/UltraHDRLoader.js';
     import { EXRLoader } from 'EXRLoader';
     import { RGBELoader } from 'RGBELoader';
+	import { GLTFLoader } from 'jsm/loaders/GLTFLoader.js';
     
 	// ... imports ...
 
@@ -1120,6 +1126,42 @@
     (error) => {
       console.error("An error occurred:", error);
     });
+	
+	// Initialize the loader once
+	const gltfLoader = new GLTFLoader();
+
+	// Load your first piece of furniture
+	gltfLoader.load(
+    './models/modern_sofa_3d.glb', // The path to your file
+    
+    // 1. onLoad Callback (When it finishes downloading)
+    (gltf) => {
+        const sofa = gltf.scene; // The actual 3D object is inside the 'scene' property
+        
+        // Position and scale it
+        sofa.position.set(-9, -0.2, 2); // Against left wall
+        sofa.scale.setScalar(3.0);    // Adjust this if the model is huge or tiny
+		sofa.rotation.y = Math.PI / 2; 
+        
+        // Optional: Loop through the model to enable shadows on all its pieces
+        sofa.traverse((child) => {
+            if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+            }
+        });
+        scene.add(sofa);
+    },
+    // 2. onProgress Callback (Optional, good for loading screens)
+    (xhr) => {
+        // console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+    },
+    // 3. onError Callback
+    (error) => {
+        console.error('An error happened loading the sofa:', error);
+    }
+);
+	
 	// Note: The clamp function might not be defined natively in pure JS in your scope, 
     // so you can add this helper outside your animate loop:
     const clamp = (num, min, max) => Math.min(Math.max(num, min), max);
