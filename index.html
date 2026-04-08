@@ -37,7 +37,7 @@
 <body>
 <div id="envMapProg" class="divStyle">Loading: 0%</div>
 <script type="module">
-    // CDA modified Gem Shadow GIT v3.42.html renamed index.html
+    // CDA modified Gem Shadow GIT v3.43.html renamed index.html
 	// TODO: Add thickness to left and right walls
 	// TODO: Import models. a) low sofa against left wall b) low coffee table c) wall mounted TV on far wall
 	// TODO: Load Cessna 3D model plane onto table
@@ -1129,20 +1129,17 @@
 	
 	// Initialize the loader once
 	const gltfLoader = new GLTFLoader();
-
-	// Load your first piece of furniture
-	gltfLoader.load(
-    './models/modern_sofa_3d.glb', // The path to your file
-    
+	//
+	// Load Sofa
+	//
+	gltfLoader.load('./models/modern_sofa_3d.glb', 
     // 1. onLoad Callback (When it finishes downloading)
     (gltf) => {
         const sofa = gltf.scene; // The actual 3D object is inside the 'scene' property
-        
         // Position and scale it
-        sofa.position.set(-9, -0.2, 2); // Against left wall
+        sofa.position.set(-8.5, -0.2, 2); // Against left wall
         sofa.scale.setScalar(3.0);    // Adjust this if the model is huge or tiny
 		sofa.rotation.y = Math.PI / 2; 
-        
         // Optional: Loop through the model to enable shadows on all its pieces
         sofa.traverse((child) => {
             if (child.isMesh) {
@@ -1161,8 +1158,51 @@
         console.error('An error happened loading the sofa:', error);
     }
 );
-	
-	// Note: The clamp function might not be defined natively in pure JS in your scope, 
+	//
+	// Load Antique Table
+	//
+	gltfLoader.load('./models/antique_table.glb', 
+    (gltf) => {
+        const a_table = gltf.scene; // The actual 3D object is inside the 'scene' property
+        a_table.position.set(-5, 0, 2); // Against left wall
+       // a_table.scale.setScalar(2.5);    // Adjust this if the model is huge or tiny
+		 a_table.scale.setX(2.5);    // Adjust this if the model is huge or tiny
+		 a_table.scale.setY(1.5);    // Adjust this if the model is huge or tiny
+		 a_table.scale.setZ(2.5);    // Adjust this if the model is huge or tiny
+		a_table.rotation.y = Math.PI / 24; 
+        a_table.traverse((child) => {
+            if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+            }
+        });
+        scene.add(a_table);
+    },
+    (xhr) => {
+        // console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+    },
+	// 3. onError Callback
+    (error) => {
+        console.error('An error happened loading the antique_table:', error);
+    }
+);
+	// generates Warning in console 
+/*
+THREE.GLTFLoader: Unknown extension "KHR_materials_pbrSpecularGlossiness".
+parse	@	GLTFLoader.js:425
+(anonymous)	@	GLTFLoader.js:245
+(anonymous)	@	three.module.js:43638
+Promise.then		
+load	@	three.module.js:43626
+load	@	GLTFLoader.js:241
+(anonymous)	@	index.html:1166
+*/	
+	// const furnitureGroup = new THREE.Group();
+    // furnitureGroup.add(sofa);
+    // furnitureGroup.add(a_table);
+    // scene.add(furnitureGroup);
+    
+	// Note: The clamp function might not be defined natively in pure JS in your scope,
     // so you can add this helper outside your animate loop:
     const clamp = (num, min, max) => Math.min(Math.max(num, min), max);
 
