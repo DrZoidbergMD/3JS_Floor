@@ -1,0 +1,8 @@
+Model Information:
+* title:	Modern Sofa 3D
+* source:	https://sketchfab.com/3d-models/modern-sofa-3d-0098d483923e429484e6aa5ecf957edf
+* author:	Impulsiona_Gamer (https://sketchfab.com/nicholasperdomo14)
+
+Model License:
+* license type:	SKETCHFAB Standard (https://sketchfab.com/licenses)
+* requirements:	Under basic restrictions, use worldwide, on all types of media, commercially or not, and in all types of derivative works

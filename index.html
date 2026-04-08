@@ -37,8 +37,9 @@
 <body>
 <div id="envMapProg" class="divStyle">Loading: 0%</div>
 <script type="module">
-    // CDA modified Gem Shadow GIT v3.43.html renamed index.html
+    // CDA modified Gem Shadow GIT v3.44.html renamed index.html
 	// TODO: Add thickness to left and right walls
+	// TODO: SDF blob always in front of red cube, shift cube or remove it?
 	// TODO: Import models. a) low sofa against left wall b) low coffee table c) wall mounted TV on far wall
 	// TODO: Load Cessna 3D model plane onto table
 	// TODO: Create fight path for plane to orbit light in room. Lorrenz attractor?
@@ -1126,12 +1127,15 @@
     (error) => {
       console.error("An error occurred:", error);
     });
-	
-	// Initialize the loader once
-	const gltfLoader = new GLTFLoader();
 	//
 	// Load Sofa
 	//
+const sofaTexture = texLoader.load('./models/modern_sofa_3d_GLTF/textures/material_baseColor3.jpeg');
+// CRITICAL: Three.js r160 requires this for color textures so they don't look washed out
+sofaTexture.colorSpace = THREE.SRGBColorSpace;
+	
+	// Initialize the loader once
+	const gltfLoader = new GLTFLoader();
 	gltfLoader.load('./models/modern_sofa_3d.glb', 
     // 1. onLoad Callback (When it finishes downloading)
     (gltf) => {
@@ -1145,6 +1149,11 @@
             if (child.isMesh) {
                 child.castShadow = true;
                 child.receiveShadow = true;
+				child.material = new THREE.MeshStandardMaterial({
+                        map: sofaTexture,  // Apply your manually loaded image
+                        roughness: 0.8,    // Wood is usually quite rough
+                        metalness: 0.0     // Wood is not metal
+                });
             }
         });
         scene.add(sofa);
@@ -1161,6 +1170,9 @@
 	//
 	// Load Antique Table
 	//
+	const tableTexture = texLoader.load('.models/antique_table/textures/Table_wood_diffuse.jpeg');
+    tableTexture.colorSpace = THREE.SRGBColorSpace;
+
 	gltfLoader.load('./models/antique_table.glb', 
     (gltf) => {
         const a_table = gltf.scene; // The actual 3D object is inside the 'scene' property
@@ -1174,6 +1186,26 @@
             if (child.isMesh) {
                 child.castShadow = true;
                 child.receiveShadow = true;
+				// console.log(child.material.name);
+				// FORCE GLASS FIX:
+                // Check if the material is meant to be transparent, or check its name
+                // (You might need to console.log(child.material.name) to find the exact name)
+                 if (child.material.transparent || child.material.name.toLowerCase().includes("glass")) {
+                    child.material.transparent = true;
+                    child.material.opacity = 0.3; // Adjust to taste
+                    child.material.roughness = 0.1; // Make it shiny
+                    child.material.metalness = 0.1; 
+                    child.material.depthWrite = false; // CRITICAL: Fixes rendering glitches behind the glass
+                } else {
+                    // 2. THE WOOD FIX
+                    // If it's NOT glass, assume it's the wood frame
+                    // We completely overwrite the broken material with a fresh one
+                    child.material = new THREE.MeshStandardMaterial({
+                        map: tableTexture,  // Apply your manually loaded image
+                        roughness: 0.8,    // Wood is usually quite rough
+                        metalness: 0.0     // Wood is not metal
+                    });
+                }
             }
         });
         scene.add(a_table);

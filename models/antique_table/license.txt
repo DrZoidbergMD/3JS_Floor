@@ -1,0 +1,8 @@
+Model Information:
+* title:	Antique Table
+* source:	https://sketchfab.com/3d-models/antique-table-952710913174453397cf0eb721f7b8b1
+* author:	Veebroush (https://sketchfab.com/veebroush)
+
+Model License:
+* license type:	SKETCHFAB Standard (https://sketchfab.com/licenses)
+* requirements:	Under basic restrictions, use worldwide, on all types of media, commercially or not, and in all types of derivative works
