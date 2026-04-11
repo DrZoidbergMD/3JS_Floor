@@ -37,7 +37,7 @@
 <body>
 <div id="envMapProg" class="divStyle">Loading: 0%</div>
 <script type="module">
-    // CDA modified Gem Shadow GIT v3.44.html renamed index.html
+    // CDA modified Gem Shadow GIT v3.45.html renamed index.html
 	// TODO: Add thickness to left and right walls
 	// TODO: SDF blob always in front of red cube, shift cube or remove it?
 	// TODO: Import models. a) low sofa against left wall b) low coffee table c) wall mounted TV on far wall
@@ -1178,9 +1178,9 @@ sofaTexture.colorSpace = THREE.SRGBColorSpace;
         const a_table = gltf.scene; // The actual 3D object is inside the 'scene' property
         a_table.position.set(-5, 0, 2); // Against left wall
        // a_table.scale.setScalar(2.5);    // Adjust this if the model is huge or tiny
-		 a_table.scale.setX(2.5);    // Adjust this if the model is huge or tiny
-		 a_table.scale.setY(1.5);    // Adjust this if the model is huge or tiny
-		 a_table.scale.setZ(2.5);    // Adjust this if the model is huge or tiny
+		 a_table.scale.setX(2.5);    // Adjust X scale 
+		 a_table.scale.setY(1.5);    // Adjust Y scale to flatten height 
+		 a_table.scale.setZ(2.5);    // Adjust Z scale 
 		a_table.rotation.y = Math.PI / 24; 
         a_table.traverse((child) => {
             if (child.isMesh) {
@@ -1231,17 +1231,28 @@ sofaTexture.colorSpace = THREE.SRGBColorSpace;
         console.error('An error happened loading the antique_table:', error);
     }
 );
-	// generates Warning in console 
-/*
-THREE.GLTFLoader: Unknown extension "KHR_materials_pbrSpecularGlossiness".
-parse	@	GLTFLoader.js:425
-(anonymous)	@	GLTFLoader.js:245
-(anonymous)	@	three.module.js:43638
-Promise.then		
-load	@	three.module.js:43626
-load	@	GLTFLoader.js:241
-(anonymous)	@	index.html:1166
-*/	
+	//
+	// Load Simple Cessna
+	//
+	// const planeTexture = texLoader.load('./models/antique_table/textures/Table_wood_diffuse.jpeg');
+    // planeTexture.colorSpace = THREE.SRGBColorSpace;
+	gltfLoader.load('./models/cessna_ez_GLB/cessna_172.glb', 
+    (gltf) => {
+        const a_plane = gltf.scene; // The actual 3D object is inside the 'scene' property
+        a_plane.position.set(-5, 1.018, 2); // Against left wall
+        a_plane.scale.setScalar(0.08);    // Adjust this if the model is huge or tiny
+		a_plane.rotation.y = Math.PI / 2.3; 
+        scene.add(a_plane);
+    },
+    (xhr) => {
+        // console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+    },
+	// 3. onError Callback
+    (error) => {
+        console.error('An error happened loading the Cessna plane:', error);
+    }
+);
+
 	// const furnitureGroup = new THREE.Group();
     // furnitureGroup.add(sofa);
     // furnitureGroup.add(a_table);
