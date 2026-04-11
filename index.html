@@ -1170,7 +1170,7 @@ sofaTexture.colorSpace = THREE.SRGBColorSpace;
 	//
 	// Load Antique Table
 	//
-	const tableTexture = texLoader.load('.models/antique_table/textures/Table_wood_diffuse.jpeg');
+	const tableTexture = texLoader.load('./models/antique_table/textures/Table_wood_diffuse.jpeg');
     tableTexture.colorSpace = THREE.SRGBColorSpace;
 
 	gltfLoader.load('./models/antique_table.glb', 
@@ -1202,9 +1202,22 @@ sofaTexture.colorSpace = THREE.SRGBColorSpace;
                     // We completely overwrite the broken material with a fresh one
                     child.material = new THREE.MeshStandardMaterial({
                         map: tableTexture,  // Apply your manually loaded image
-                        roughness: 0.8,    // Wood is usually quite rough
-                        metalness: 0.0     // Wood is not metal
+                        metalnessMap: texLoader.load('./models/antique_table/textures/Table_wood_specularGlossiness.png'),
+                        roughness: 0.5,    // Wood is usually quite rough - suggested .8
+                        metalness: 0.8      // Wood is not metal - suggested 0.0
                     });
+					console.log('Wood v3');
+					/* CDA test
+					child.material = new THREE.MeshPhongMaterial({
+						map: tableTexture,  // Apply your manually loaded image
+						specularMap: texLoader.load('./models/antique_table/textures/Table_wood_specularGlossiness.png'),
+						normalMap: texLoader.load('./models/antique_table/textures/Table_wood_normal.jpeg'),
+						shininess: 70.0,
+//						./threejs-earth/textures/02_earthspec1k.jpg'),
+//						bumpMap: texLoader.load('./threejs-earth/textures/01_earthbump1k.jpg'),
+//						bumpScale: 0.04,
+					});
+*/
                 }
             }
         });
