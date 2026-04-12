@@ -1237,11 +1237,14 @@ sofaTexture.colorSpace = THREE.SRGBColorSpace;
 	//
 	// const planeTexture = texLoader.load('./models/antique_table/textures/Table_wood_diffuse.jpeg');
     // planeTexture.colorSpace = THREE.SRGBColorSpace;
-	gltfLoader.load('./models/cessna_ez_GLB/cessna_172.glb', 
+//	gltfLoader.load('./models/cessna_ez_GLB/cessna_172.glb', 
+ 	gltfLoader.load('./models/cessna_bush_5mb_GLB/cessna_180_skywagon_bush_version.glb', 
     (gltf) => {
         const a_plane = gltf.scene; // The actual 3D object is inside the 'scene' property
-        a_plane.position.set(-5, 1.018, 2); // Against left wall
+        // a_plane.position.set(-5, 1.018, 2); // Against left wall cessna_ez_GLB
+		a_plane.position.set(-5.3, 1.138, 2.5); // Against left wall cessna_bush_5mb_GLB
         a_plane.scale.setScalar(0.08);    // Adjust this if the model is huge or tiny
+		a_plane.rotation.x = - Math.PI / 13; // wheels flat for cessna_bush_5mb_GLB
 		a_plane.rotation.y = Math.PI / 2.3; 
         scene.add(a_plane);
     },
