@@ -41,11 +41,20 @@
     // CDA modified Gem Shadow GIT v3.45.html renamed index.html
 	// TODO: Add thickness to left and right walls
 	// TODO: SDF blob always in front of red cube, shift cube or remove it?
+		// TODO: 	If blob behind red cube need to render cube last somehow?
 	// TODO: Import models. a) low sofa against left wall b) low coffee table c) wall mounted TV on far wall
 	// TODO: Load Cessna 3D model plane onto table
 	// TODO: Create fight path for plane to orbit light in room. Lorrenz attractor?
 	// TODO: Animate plane a) props b) exhaust 
 	// TODO: Animate plane c) basic path d) Advanced path using pitch roll yaw. Quaternions?
+	
+	// TODO:X Move Red Cube back and left
+	// TODO:X When Animation Mode = Static, hide Loop Time 
+	// TODO: Display current camera position and orientation in UI vec3(Camera.worldPosition), vec3(Camera.lookAt) ?
+	// TODO: 	Add the ability to save above values as presets to something permanent... cookie, .csv file ?
+	// TODO: 	Add ability to name the saved values 
+	// TODO: 	Add ability to load presets at startup 
+
     import * as THREE from 'three';
     import { OrbitControls } from 'OrbitControls';
     import GUI from 'lil-gui';
@@ -54,8 +63,6 @@
     import { RGBELoader } from 'RGBELoader';
 	import { GLTFLoader } from 'jsm/loaders/GLTFLoader.js';
     
-	// ... imports ...
-
     // --- HELPER: Fresnel Glow Shader (Inline) ---
     function getFresnelMat({rimHex = 0x0088ff, facingHex = 0x000000} = {}) {
       const uniforms = {
@@ -176,8 +183,9 @@
         colRot: false,
         // Fade animation 
         animMode: 0,         // 0=Static, 1=Fade Up, 2=Fade Down, 3=Pulse
+		                     // 4=Fade Out 5=Fade In 6=Glass Pulse 
         fadeTime: 10.0,      // Seconds for a full loop
-        showSpace: true,     // Toggle Earth Moon
+         showSpace: true,     // Toggle Earth Moon
         randomizeColors: function() {
             // Light Squares: Range 56 to 255
             // (Math.random() * 199) + 56 ensures we fall in that range
@@ -235,24 +243,18 @@
         myRPCntlr.show();
         myRotCntlr.hide();
         myHUCntlr.hide();
-//        myAMCntlr.show();
-//        myFTCntrl.show();
       } else {    
         myRPCntlr.hide();
         if (value === 1) {    // 1 = colour
           myRotCntlr.show();
           myHUCntlr.show();
-//          myAMCntlr.show();
-//          myFTCntrl.show();
         } else {              // 0 = B&W
           myRotCntlr.hide();
           myHUCntlr.hide();
-//          myAMCntlr.hide();
-//          myFTCntrl.hide();
         }
       }
     });
-    // Dropdown for Animation
+    // Dropdown for floor colour Animation
     const myAMCntlr = fFolder.add(guiObj, 'animMode', { 
        'Static (Full Color)': 0, 
        'Fade Up (BW->Col)': 1, 
@@ -262,9 +264,16 @@
        'Fade In (Trans->Solid)': 5,
        'Glass Pulse (Solid->Trans->Solid)': 6
     }).name('Anim Mode');
-	
+	myAMCntlr.onChange(value => {
+      if (value === 0) {      // 0 = Static, no fade
+        myFTCntrl.hide();
+      } else {    
+        myFTCntrl.show();
+      }
+    });
+
     const myFTCntrl = fFolder.add(guiObj, 'fadeTime', 1.0, 20.0,1.0).name('Loop Time (s)');
-    const myRPCntlr = fFolder.add( guiObj, 'randomizeColors').name('Randomize Palette'); // NEW BUTTON
+    const myRPCntlr = fFolder.add( guiObj, 'randomizeColors').name('Randomize Palette');
     const myRotCntlr = fFolder.add( guiObj, 'colRot').name('Rotate Colors').listen();
 	myRotCntlr.onChange(value => {
       if (value===false) {      // no rotation
@@ -279,12 +288,12 @@
     const mySpotCntlr = gui.add( guiObj, 'freezeSpot').name('Freeze Spotlight').listen();
     
     gui.add( guiObj, 'gridDensity', 5.0, 30.0, 5.0 ).name('Grid Density');
-		
 	gui.add(guiObj, 'showSpace').name('Show Earth/Moon').onChange((value) => {spaceGroup.visible = value;});
 	
     // Trigger the logic to set initial visibility states
     myPrgCntlr.setValue(1);
 	myCMCntlr.setValue(0);
+	myAMCntlr.setValue(0);
     
     // --- 1. VERTEX SHADER GLSL (Geometry) ---
     let vertexPars, vertexMain, fragmentPars, fragmentMain;
@@ -664,7 +673,7 @@
       new THREE.BoxGeometry(1, 1, 1), 
       new THREE.MeshStandardMaterial({ color: 0xff0040 })
     );
-    cube.position.set(0, 2, 0);
+    cube.position.set(-3, 3, -5); // was (0,2,0)
     cube.castShadow = true; 
     scene.add(cube);
 	// light rose
@@ -1338,7 +1347,9 @@ sofaTexture.colorSpace = THREE.SRGBColorSpace;
         // Objects
         cube.rotation.x = time;
         cube.rotation.y = time * 0.5;
-        cube.position.y = 2 + Math.sin(time) * 0.5; 
+        cube.position.x = -3 + Math.cos(time) * 3.; 
+        cube.position.y = 3 + Math.sin(time) * 2; 
+        cube.position.z = -5 + Math.sin(time) * 3.; 
 
         // Light & Torus
         var lx; var ly; 
