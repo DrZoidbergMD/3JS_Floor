@@ -41,19 +41,21 @@
     // CDA modified Gem Shadow GIT v3.47.html renamed index.html
 	// TODO: Add thickness to left and right walls
 	// TODO: SDF blob always in front of red cube, shift cube or remove it?
-		// TODO: 	If blob behind red cube need to render cube last somehow?
+	// TODO: 	If blob behind red cube need to render cube last somehow?
 	// TODO: Import models. a) low sofa against left wall b) low coffee table c) wall mounted TV on far wall
-	// TODO: Load Cessna 3D model plane onto table
+	// TODO:X Load Cessna 3D model plane onto table
 	// TODO: Create fight path for plane to orbit light in room. Lorrenz attractor?
 	// TODO: Animate plane a) props b) exhaust 
 	// TODO: Animate plane c) basic path d) Advanced path using pitch roll yaw. Quaternions?
 	
 	// TODO:X Move Red Cube back and left
 	// TODO:X When Animation Mode = Static, hide Loop Time 
-	// TODO: Display current camera position and orientation in UI vec3(Camera.worldPosition), vec3(Camera.lookAt) ?
-	// TODO: 	Add the ability to save above values as presets to something permanent... cookie, .csv file ?
-	// TODO: 	Add ability to name the saved values 
-	// TODO: 	Add ability to load presets at startup 
+	// TODO:X Display current camera position and orientation in UI vec3(Camera.worldPosition), vec3(Camera.lookAt) ?
+	// TODO:X Add the ability to save above values as presets to localStorage 
+	// TODO: Add the ability to save above values as presets to Jason file 
+	// TODO:X Add ability to name the saved values 
+	// TODO:X Add ability to delete the saved values 
+	// TODO:X Add ability to load presets at startup 
 
     import * as THREE from 'three';
     import { OrbitControls } from 'OrbitControls';
@@ -213,7 +215,9 @@
     }
 	/* */
 	
-    // --- GUI OBJECT ---
+    // --- GUI OBJECT START ---
+    // --- GUI OBJECT START ---
+    // --- GUI OBJECT START ---
     const guiObj = {
         subProg: 3,         // 1=Flat, 2=Ripple, 3=Landscape, 4=Splash
         flySpeed: 0.5,
@@ -279,16 +283,47 @@
                 pos: { x: camera.position.x, y: camera.position.y, z: camera.position.z },
                 target: { x: controls.target.x, y: controls.target.y, z: controls.target.z }
             };
-            
             // Save to browser memory
             localStorage.setItem('threejs_camera_presets', JSON.stringify(cameraPresets));
-            
             // Update the lil-gui dropdown list to include the new name
             presetDropdown.options(Object.keys(cameraPresets));
             guiObj.activePreset = name;
-        }
-		/* */ 
-    };
+		},
+		
+		deletePreset: function() {
+			const name = guiObj.activePreset;
+
+			// 1. Protect Master Presets (checked regardless of platform)
+			if (CONFIG.masterPresets[name]) {
+				alert("Cannot delete System Presets.");
+				return;
+			}
+
+			if (confirm(`Delete preset "${name}"?`)) {
+				// 2. Remove from the local active object
+				delete cameraPresets[name];
+
+				// 3. Update localStorage (we only save the non-master parts)
+				const userPresets = {};
+				for (let key in cameraPresets) {
+					if (!CONFIG.masterPresets[key]) {
+						userPresets[key] = cameraPresets[key];
+					}
+				}
+				localStorage.setItem('threejs_camera_presets', JSON.stringify(userPresets));
+
+				// 4. Update the lil-gui dropdown list (The "refresh" logic)
+				presetDropdown.options(Object.keys(cameraPresets));
+        
+				// 5. Reset to default view after deletion
+				guiObj.activePreset = "Default Start";
+				applyCameraPreset("Default Start");
+			}
+		}
+	};
+    // --- GUI OBJECT END ---
+    // --- GUI OBJECT END ---
+    // --- GUI OBJECT END ---
 
     const myPrgCntlr = gui.add( guiObj, 'subProg', 1, 4, 1 ).name('Prog (1-4)').listen();
     myPrgCntlr.onChange(value => {
@@ -382,8 +417,6 @@
 	myCMCntlr.setValue(0);
 	myAMCntlr.setValue(0);
     
-	/* Camera Presets v3.46 Part 3 */
-	
 	/* Camera Presets v3.46 Part 3 Refactored */
 	const camFolder = gui.addFolder('Camera & Presets');
     // The Dropdown for saved presets
@@ -396,7 +429,7 @@
 
 	// --- 2. CAMERA UI FOLDER ---
     // The Save Button
-	// ONLY add the Save button if we are NOT on GitHub
+	// ONLY add the Save & Delete button if we are NOT on GitHub
 	let presetSave;
 	if (!CONFIG.isGitHub) {
 		presetSave = camFolder.add(guiObj, 'savePreset')
@@ -408,6 +441,7 @@
 //				console.log(cameraPresets);       // obj of cameraPresets names each with pos & tar objects 
 				presetDropdown.setValue(guiObj.activePreset);
             });
+			camFolder.add(guiObj, 'deletePreset').name('Delete Selected');   // name('🗑️ Delete Selected');
 	}
 	
         // Live Readouts (Read Only)
@@ -420,7 +454,6 @@
         
         // Optional: Close the folder by default so it's not too overwhelming
         // camFolder.close();
-	/* */
     
     // --- 1. VERTEX SHADER GLSL (Geometry) ---
     let vertexPars, vertexMain, fragmentPars, fragmentMain;
@@ -829,7 +862,6 @@
     torus.rotation.x = -Math.PI / 2; 
     torus.position.set(5, 8, 5);
     scene.add( torus );
-	
 	//
 	// Walls and ceiling
 	//
@@ -861,7 +893,7 @@
 		side: THREE.DoubleSide // Ensures it renders no matter which way it faces
 	});
 
-	// Right Walls (Wallpaper + Window Hole)
+	// Right Wall (Wallpaper + Window Hole)
 	const windowWallMat = new THREE.MeshStandardMaterial({
 		map: wallPaperTex,
 		alphaMap: windowAlphaTex,
@@ -869,7 +901,7 @@
 		alphaTest: 0.5,         // Keeps shadows looking clean through the window hole
 		side: THREE.DoubleSide
 	});
-	
+	// Left Wall (Wallpaper + Window Hole)
 	const leftWallMat = new THREE.MeshStandardMaterial({
 		map: leftWallTex,
 		alphaMap: leftWindowAlphaTex,
@@ -877,7 +909,6 @@
 		alphaTest: 0.5,         // Keeps shadows looking clean through the window hole
 		side: THREE.DoubleSide
 	});
-	
 	// Ceiling (Solid Wallpaper)
 	const solidCeilingMat = new THREE.MeshStandardMaterial({
 		map: ceilingTex,
@@ -909,7 +940,6 @@
 	scene.add(rightWall);
 
 	// --- CEILING ---
-
 	const ceiling = new THREE.Mesh(ceilingGeo, solidCeilingMat);
 	ceiling.receiveShadow = true; // ceiling.castShadow = true; 
 	ceiling.rotation.x = Math.PI / 2; // Lay flat
@@ -1261,9 +1291,6 @@
 				progressDiv.innerText = `Loading HDR: ${percentComplete}%`;
 			}
 		},
-//         (progress) => {
-//          console.log((progress.loaded / progress.total * 100) + '% loaded');
-//         }, 
 		(error) => {
 			console.error("An error occurred:", error);
 		});
@@ -1284,9 +1311,6 @@
 				progressDiv.innerText = `Loading HDR: ${percentComplete}%`;
 			}
 		},
-//    		(progress) => {
-//            console.log((progress.loaded / progress.total * 100) + '% loaded');
-//    		}, 
 		(error) => {
 			console.error("An error occurred:", error);
 		});
@@ -1325,7 +1349,12 @@ sofaTexture.colorSpace = THREE.SRGBColorSpace;
     },
     // 2. onProgress Callback (Optional, good for loading screens)
     (xhr) => {
-        // console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+			// Progress callback
+			if (xhr.lengthComputable) {
+				const percentComplete = Math.round((xhr.loaded / xhr.total) * 100);
+				console.log(xhr.loaded + ' of ' + xhr.total + ' so ' + percentComplete + '% downloaded');
+				progressDiv.innerText = `Loading Sofa: ${percentComplete}%`;
+			}
     },
     // 3. onError Callback
     (error) => {
@@ -1372,7 +1401,7 @@ sofaTexture.colorSpace = THREE.SRGBColorSpace;
                         roughness: 0.5,    // Wood is usually quite rough - suggested .8
                         metalness: 0.8      // Wood is not metal - suggested 0.0
                     });
-					console.log('Wood v3');
+					console.log('Wood v3 A');
 					/* CDA test
 					child.material = new THREE.MeshPhongMaterial({
 						map: tableTexture,  // Apply your manually loaded image
@@ -1389,19 +1418,22 @@ sofaTexture.colorSpace = THREE.SRGBColorSpace;
         });
         scene.add(a_table);
     },
-    (xhr) => {
-        // console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+    (xhr) => {			
+			// Progress callback
+			if (xhr.lengthComputable) {
+				const percentComplete = Math.round((xhr.loaded / xhr.total) * 100);
+				console.log(xhr.loaded + ' of ' + xhr.total + ' so ' + percentComplete + '% downloaded');
+				progressDiv.innerText = `Loading antique_table A : ${percentComplete}%`;
+			}
     },
 	// 3. onError Callback
     (error) => {
         console.error('An error happened loading the antique_table:', error);
     }
 );
-
     //
 	// Load Antique Table B (*.glb exported via https://gltf.report/ )
 	//
-
 	gltfLoader.load('./models/antique_table_exp-v1.glb', 
     (gltf) => {
         const b_table = gltf.scene; // The actual 3D object is inside the 'scene' property
@@ -1415,14 +1447,17 @@ sofaTexture.colorSpace = THREE.SRGBColorSpace;
         scene.add(b_table);
     },
     (xhr) => {
-        // console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+        if (xhr.lengthComputable) {
+			const percentComplete = Math.round((xhr.loaded / xhr.total) * 100);
+			console.log(xhr.loaded + ' of ' + xhr.total + ' so ' + percentComplete + '% downloaded');
+			progressDiv.innerText = `Loading antique_table B : ${percentComplete}%`;
+		}
     },
 	// 3. onError Callback
     (error) => {
         console.error('An error happened loading the exp antique_table:', error);
     }
 );
-
 	//
 	// Load Simple Cessna
 	//
@@ -1440,7 +1475,11 @@ sofaTexture.colorSpace = THREE.SRGBColorSpace;
         scene.add(a_plane);
     },
     (xhr) => {
-        // console.log((xhr.loaded / xhr.total * 100) + '% loaded');
+        if (xhr.lengthComputable) {
+			const percentComplete = Math.round((xhr.loaded / xhr.total) * 100);
+			console.log(xhr.loaded + ' of ' + xhr.total + ' so ' + percentComplete + '% downloaded');
+			progressDiv.innerText = `Loading cessna_bush_5mb_GLB: ${percentComplete}%`;
+		}
     },
 	// 3. onError Callback
     (error) => {
@@ -1570,8 +1609,7 @@ sofaTexture.colorSpace = THREE.SRGBColorSpace;
             dripLight.color.setRGB(r, Math.max(0, g), Math.max(0, b));
         }
 		/* Camera Presets v3.46 Part 4 */
-		time *= 0.001; // convert to seconds
-        
+		time *= 0.001; // convert to seconds        
         // --- UPDATE LIVE CAMERA UI ---
         // Round to 1 decimal place for clean UI display
         guiObj.camX = parseFloat(camera.position.x.toFixed(1));
