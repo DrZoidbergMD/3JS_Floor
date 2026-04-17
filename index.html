@@ -52,7 +52,7 @@
 	// TODO:X When Animation Mode = Static, hide Loop Time 
 	// TODO:X Display current camera position and orientation in UI vec3(Camera.worldPosition), vec3(Camera.lookAt) ?
 	// TODO:X Add the ability to save above values as presets to localStorage 
-	// TODO: Add the ability to save above values as presets to Jason file 
+	// TODO:X Add the ability to save above values as presets to json file 
 	// TODO:X Add ability to name the saved values 
 	// TODO:X Add ability to delete the saved values 
 	// TODO:X Add ability to load presets at startup 
@@ -213,7 +213,6 @@
         // CRITICAL: You must call update after changing target programmatically
         controls.update(); 
     }
-	/* */
 	
     // --- GUI OBJECT START ---
     // --- GUI OBJECT START ---
@@ -256,7 +255,7 @@
         // PRESET CONTROLS
         activePreset: "Default Start", // -5,7,17,0,0,0 "Default Start"
 		
-		// Lines below to be stored in JASON file in Local Server Version.
+		// Lines below to be stored in JSON file in Local Server Version.
 		// Lines below to be hardcoded into GitHub verion
 		
 		// activePreset: "Plane from Couch", // -6.3,1.5,3.2,0,0,0 "Plane from Couch"
@@ -319,12 +318,30 @@
 				guiObj.activePreset = "Default Start";
 				applyCameraPreset("Default Start");
 			}
+		}, 
+			// --- NEW: BACKUP TO LOCAL FILE ---
+		backupToFile: function() {
+			// We only want to backup the USER presets, not the hardcoded master ones
+			const userPresets = {};
+			for (let key in cameraPresets) {
+				if (!CONFIG.masterPresets[key]) {
+					userPresets[key] = cameraPresets[key];
+				}
+			}
+			fetch('/save-presets', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify(userPresets)
+			})
+			.then(response => response.json())
+			.then(data => alert(data.status))
+			.catch(err => console.error("Backup failed:", err));
 		}
 	};
     // --- GUI OBJECT END ---
     // --- GUI OBJECT END ---
     // --- GUI OBJECT END ---
-
+	
     const myPrgCntlr = gui.add( guiObj, 'subProg', 1, 4, 1 ).name('Prog (1-4)').listen();
     myPrgCntlr.onChange(value => {
       if (value === 3) {     // landscape
@@ -442,9 +459,34 @@
 				presetDropdown.setValue(guiObj.activePreset);
             });
 			camFolder.add(guiObj, 'deletePreset').name('Delete Selected');   // name('🗑️ Delete Selected');
+		// --- NEW: BACKUP TO LOCAL FILE ---
+		camFolder.add(guiObj, 'backupToFile').name('Backup to .json');   // name('💾 Backup to .json');
 	}
+
 	
-        // Live Readouts (Read Only)
+	// --- NEW: BACKUP TO LOCAL FILE ---
+	guiObj.backupToFile = function() {
+		// We only want to backup the USER presets, not the hardcoded master ones
+		const userPresets = {};
+		for (let key in cameraPresets) {
+			if (!CONFIG.masterPresets[key]) {
+				userPresets[key] = cameraPresets[key];
+			}
+		}
+		fetch('/save-presets', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify(userPresets)
+		})
+		.then(response => response.json())
+		.then(data => alert(data.status))
+		.catch(err => console.error("Backup failed:", err));
+	};
+	
+	
+	
+	
+    // Live Readouts (Read Only)
         camFolder.add(guiObj, 'camX').name('Cam X').listen().disable();
         camFolder.add(guiObj, 'camY').name('Cam Y').listen().disable();
         camFolder.add(guiObj, 'camZ').name('Cam Z').listen().disable();
