@@ -3,15 +3,11 @@
 <head>
     <style> body { margin: 0; overflow: hidden; }
 	div.divStyle { 
-    /* The magic happens here */
     position: absolute; 
     top: 20px;          /* Distance from the top of the screen */
     left: 50%;          /* Move to the horizontal center */
     transform: translateX(-50%); /* Offset by half its width to perfectly center */
-    
     z-index: 100;       /* Ensures it stays on top of the 3D canvas */
-    
-    /* Your existing styles */
     height: 40px; 
     width: 30%; 
     background-color: powderblue; 
@@ -29,7 +25,7 @@
         "OrbitControls": "https://unpkg.com/three@0.160.0/examples/jsm/controls/OrbitControls.js", 
         "lil-gui": "https://unpkg.com/lil-gui@0.19.1/dist/lil-gui.esm.min.js",
         "jsm/": "https://cdn.jsdelivr.net/npm/three@0.167/examples/jsm/",
-        "EXRLoader": "https://unpkg.com/three@0.160.0/examples/jsm/loaders/EXRLoader.js",
+		"DISABLED_EXRLoader": "https://unpkg.com/three@0.160.0/examples/jsm/loaders/EXRLoader.js",
         "RGBELoader": "https://unpkg.com/three@0.160.0/examples/jsm/loaders/RGBELoader.js" 
        }
       }
@@ -48,20 +44,11 @@
 	// TODO: Animate plane a) props b) exhaust 
 	// TODO: Animate plane c) basic path d) Advanced path using pitch roll yaw. Quaternions?
 	
-	// TODO:X Move Red Cube back and left
-	// TODO:X When Animation Mode = Static, hide Loop Time 
-	// TODO:X Display current camera position and orientation in UI vec3(Camera.worldPosition), vec3(Camera.lookAt) ?
-	// TODO:X Add the ability to save above values as presets to localStorage 
-	// TODO:X Add the ability to save above values as presets to json file 
-	// TODO:X Add ability to name the saved values 
-	// TODO:X Add ability to delete the saved values 
-	// TODO:X Add ability to load presets at startup 
-
     import * as THREE from 'three';
     import { OrbitControls } from 'OrbitControls';
     import GUI from 'lil-gui';
-    import { UltraHDRLoader } from 'jsm/loaders/UltraHDRLoader.js';
-    import { EXRLoader } from 'EXRLoader';
+//    import { UltraHDRLoader } from 'jsm/loaders/UltraHDRLoader.js';
+//    import { EXRLoader } from 'EXRLoader';
     import { RGBELoader } from 'RGBELoader';
 	import { GLTFLoader } from 'jsm/loaders/GLTFLoader.js';
     
@@ -219,20 +206,20 @@
     // --- GUI OBJECT START ---
     const guiObj = {
         subProg: 3,         // 1=Flat, 2=Ripple, 3=Landscape, 4=Splash
-        flySpeed: 0.5,
-        ripSize: 3.0,
-        ripFreq: 3.0,
-        freezeRip: false,   // Freeze Rip
+        flySpeed: 0.5,		// Landscape only
+        ripSize: 3.0,		// subProg 2 & 4
+        ripFreq: 3.0,		// subProg 2 & 4
+        freezeRip: false,   // Freeze Ripple, subProg 2 & 4
         colorMode: 0,       // 0 = B&W, 1 = Color (Algorithmic), 2=Random
-        hueSpeed: 0.5,      // Speed of color rotation
+        colRot: false,		// color rotation?, colorMode 1
+        hueSpeed: 0.5,      // Speed of color rotation, colorMode 1
         gridDensity: 10.0,  // How many squares
         freezeSpot: true,
-        colRot: false,
         // Fade animation 
         animMode: 0,         // 0=Static, 1=Fade Up, 2=Fade Down, 3=Pulse
 		                     // 4=Fade Out 5=Fade In 6=Glass Pulse 
         fadeTime: 10.0,      // Seconds for a full loop
-         showSpace: true,     // Toggle Earth Moon
+        showSpace: true,     // Toggle Earth Moon
         randomizeColors: function() {
             // Light Squares: Range 56 to 255
             // (Math.random() * 199) + 56 ensures we fall in that range
@@ -255,9 +242,7 @@
         // PRESET CONTROLS
         activePreset: "Default Start", // -5,7,17,0,0,0 "Default Start"
 		
-		// Lines below to be stored in JSON file in Local Server Version.
 		// Lines below to be hardcoded into GitHub verion
-		
 		// activePreset: "Plane from Couch", // -6.3,1.5,3.2,0,0,0 "Plane from Couch"
 		// activePreset: "Reference View Earth", // -1.8,6.9,16.9,-0.5,2.9,0.7 "Reference View Earth"
 		// activePreset: "Plane landed LHS", // -3.6,1,3,-4.6,1,3 "Plane landed LHS"
@@ -265,9 +250,7 @@
 		// activePreset: "Door", // 3,5.5,-0.6,3.2,5.3,-1.2 "Door"
 		// activePreset: "Max E. Left Wall", // 4.5,4.5,-0.7,3.7,4.5,-0.7 "Max E. Left Wall"
 		// activePreset: "Behind Moon Orbit", // 6,80.7,739.1,-151.9,1, 33.9 "Behind Moon Orbit"
-
-		// CDA BugFix "Load Preset" gui not updated after "Save Current View" 
-            
+		// Saved values to be stored in JSON file in Local Server Version.
         savePreset: function() {
 			if (CONFIG.isGitHub) {
 				console.log("Saving is disabled in the GitHub version.");
@@ -455,15 +438,11 @@
 		    .onChange((value) => {
 //				debugger;
 //				console.log(guiObj.activePreset); // "temp 2"
-//				console.log(cameraPresets);       // obj of cameraPresets names each with pos & tar objects 
 				presetDropdown.setValue(guiObj.activePreset);
             });
-			camFolder.add(guiObj, 'deletePreset').name('Delete Selected');   // name('🗑️ Delete Selected');
-		// --- NEW: BACKUP TO LOCAL FILE ---
+		camFolder.add(guiObj, 'deletePreset').name('Delete Selected');   // name('🗑️ Delete Selected');
 		camFolder.add(guiObj, 'backupToFile').name('Backup to .json');   // name('💾 Backup to .json');
 	}
-
-	
 	// --- NEW: BACKUP TO LOCAL FILE ---
 	guiObj.backupToFile = function() {
 		// We only want to backup the USER presets, not the hardcoded master ones
@@ -483,19 +462,15 @@
 		.catch(err => console.error("Backup failed:", err));
 	};
 	
-	
-	
-	
     // Live Readouts (Read Only)
-        camFolder.add(guiObj, 'camX').name('Cam X').listen().disable();
-        camFolder.add(guiObj, 'camY').name('Cam Y').listen().disable();
-        camFolder.add(guiObj, 'camZ').name('Cam Z').listen().disable();
-		camFolder.add(guiObj, 'tarX').name('Tar X').listen().disable();
-        camFolder.add(guiObj, 'tarY').name('Tar Y').listen().disable();
-        camFolder.add(guiObj, 'tarZ').name('Tar Z').listen().disable();
-        
-        // Optional: Close the folder by default so it's not too overwhelming
-        // camFolder.close();
+    camFolder.add(guiObj, 'camX').name('Cam X').listen().disable();
+    camFolder.add(guiObj, 'camY').name('Cam Y').listen().disable();
+    camFolder.add(guiObj, 'camZ').name('Cam Z').listen().disable();
+	camFolder.add(guiObj, 'tarX').name('Tar X').listen().disable();
+    camFolder.add(guiObj, 'tarY').name('Tar Y').listen().disable();
+    camFolder.add(guiObj, 'tarZ').name('Tar Z').listen().disable();
+    // Optional: Close the folder by default so it's not too overwhelming
+    camFolder.close();
     
     // --- 1. VERTEX SHADER GLSL (Geometry) ---
     let vertexPars, vertexMain, fragmentPars, fragmentMain;
@@ -803,15 +778,15 @@
       uRipFreq: { value: 3.0 },
       uFreezeRip: { value: false },
       // New Fragment Uniforms
-      uCurrentHue: { value: 240.0 }, // Blue start
-      uMirrorHue:  { value: 60.0 },  // Yellow start
+      uCurrentHue: { value: 240.0 },   // Blue start
+      uMirrorHue:  { value: 60.0 },    // Yellow start
       uGridDensity: { value: 5.0 },
       uColorMode: { value: 1 },       // 1 = Color
       // Initialize random colors
-      uRandCol1: { value: new THREE.Color(1, 0, 1) }, // Magenta
+      uRandCol1: { value: new THREE.Color(1, 0, 1) },  // Magenta
       uRandCol2: { value: new THREE.Color(0, 1, 0) },  // Green
-      uMixVal: { value: 1.0 }, // Start visible
-	  uAlphaMix: { value: 1.0 } // NEW: Controls opacity
+      uMixVal: { value: 1.0 },        // Start visible
+	  uAlphaMix: { value: 1.0 }       // NEW: Controls opacity
     };
     
     // --- SHADER INJECTION FUNCTION ---
@@ -864,13 +839,14 @@
     depthMatFlr.onBeforeCompile = (shader) => modifyShader(shader, false);
 
     // --- SCENE OBJECTS ---
+	// Floor
     const roomFlr = new THREE.Mesh(geoFlr, matFlr); 
     roomFlr.rotation.x = -Math.PI / 2; 
     roomFlr.receiveShadow = true; 
     roomFlr.castShadow = true; 
     roomFlr.customDepthMaterial = depthMatFlr;
     scene.add(roomFlr);
-  
+    // Cube
     const cube = new THREE.Mesh(
       new THREE.BoxGeometry(1, 1, 1), 
       new THREE.MeshStandardMaterial({ color: 0xff0040 })
@@ -878,7 +854,7 @@
     cube.position.set(-3, 3, -5); // was (0,2,0)
     cube.castShadow = true; 
     scene.add(cube);
-	// light rose
+	// Light rose
 	const cylinder1 = new THREE.Mesh(
 	  new THREE.CylinderGeometry(5,5,1.25,18,1),
       new THREE.MeshStandardMaterial({ color: 0xeeeeee })
@@ -887,7 +863,7 @@
 	cylinder1.castShadow = true;
 	cylinder1.scale.setScalar(.0625);
 	scene.add(cylinder1);
-	//light wire
+	// Light wire
 	const cylinder2 = new THREE.Mesh(
 	  new THREE.CylinderGeometry(.5,.5,28,8,8),
       new THREE.MeshStandardMaterial({ color: 0xeeeeee })
@@ -896,7 +872,7 @@
 	cylinder2.castShadow = true;
 	cylinder2.scale.setScalar(.0625);
 	scene.add(cylinder2);
-	
+	// Spotlight torus
     const torus = new THREE.Mesh( 
         new THREE.TorusGeometry( .25, .1, 12, 48 ), 
         new THREE.MeshNormalMaterial() 
@@ -1264,41 +1240,9 @@
     // Helper for Hue Rotation
     let hueAccumulator = 240.0; // Start Blue
     
-    /* UltraHDRLoader
-    // add environment map
-    const hdrLoader = new UltraHDRLoader(); // rogland_clear_night_4k.exr from https://polyhaven.com/a/rogland_clear_night
-//    hdrLoader.load('envs/test.jpg', (hdr) => {
-//    hdrLoader.load('rogland_clear_night_4k.exr', (hdr) => {
-//      hdrLoader.load('https://www.spacespheremaps.com/wp-content/uploads/HDR_asteroid_field.hdr',  (hdr) => {
-      hdrLoader.load('HDR_asteroid_field.hdr',  (hdr) => {
-      hdr.mapping = THREE.EquirectangularReflectionMapping;
-      scene.background = hdr;
-      scene.environment = hdr;
-    },
-     (progress) => {
-        // Progress (optional)
-         console.log((progress.loaded / progress.total * 100) + '% loaded'); 
-    },
-    (error) => {
-        // ERROR HANDLER
-        console.error("An error happened:", error);
-    });
-*/
-
     const pmremGenerator = new THREE.PMREMGenerator(renderer);
     pmremGenerator.compileEquirectangularShader();
 	let fileTot;
-	if (CONFIG.isGitHub) {
-		// Hack to fix loading progress percentage
-		let fileRes = "4k";  // "2k"; "8k";  // File resolutions
-		fileTot = 65687151;              // Full res 8k
-		if (fileRes == "4k") {
-			fileTot = 33554497;      
-		} else if (fileRes == "2k") {
-			fileTot = 8388673;
-		}
-	}
-      const rgbeLoader = new RGBELoader();
     {
     // Robot Bobby code  Using a known CORS-friendly space HDR from Poly Haven
     // rgbeLoader.load('https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/starmap_2020_1k.hdr', (hdr) => {
@@ -1314,8 +1258,16 @@
      // rgbeLoader.load('https://drzoidbergmd.github.io/3JS_Floor/releases/download/v0.1/Assets/HDR_asteroid_field_2k.hdr',  (hdr) => {  // 8k version    64Mb
      // rgbeLoader.crossOrigin = null;
      }
-	 
-	if (CONFIG.isGitHub) { 
+	 const rgbeLoader = new RGBELoader();
+	if (CONFIG.isGitHub) {
+		// Hack to fix loading progress percentage
+		let fileRes = "4k";  // "2k"; "8k";  // File resolutions
+		fileTot = 65687151;              // Full res 8k
+		if (fileRes == "4k") {
+			fileTot = 33554497;      
+		} else if (fileRes == "2k") {
+			fileTot = 8388673;
+		}
 		rgbeLoader.load('resources/HDR_asteroid_field_4k.hdr', (hdr) => {
 		hdr.mapping = THREE.EquirectangularReflectionMapping;
 		scene.background = hdr;
@@ -1357,13 +1309,12 @@
 			console.error("An error occurred:", error);
 		});
 	}
-	
 	//
 	// Load Sofa
 	//
-const sofaTexture = texLoader.load('./models/modern_sofa_3d_GLTF/textures/material_baseColor3.jpeg');
-// CRITICAL: Three.js r160 requires this for color textures so they don't look washed out
-sofaTexture.colorSpace = THREE.SRGBColorSpace;
+	const sofaTexture = texLoader.load('./models/modern_sofa_3d_GLTF/textures/material_baseColor3.jpeg');
+	// CRITICAL: Three.js r160 requires this for color textures so they don't look washed out
+	sofaTexture.colorSpace = THREE.SRGBColorSpace;
 	
 	// Initialize the loader once
 	const gltfLoader = new GLTFLoader();
@@ -1444,17 +1395,6 @@ sofaTexture.colorSpace = THREE.SRGBColorSpace;
                         metalness: 0.8      // Wood is not metal - suggested 0.0
                     });
 					console.log('Wood v3 A');
-					/* CDA test
-					child.material = new THREE.MeshPhongMaterial({
-						map: tableTexture,  // Apply your manually loaded image
-						specularMap: texLoader.load('./models/antique_table/textures/Table_wood_specularGlossiness.png'),
-						normalMap: texLoader.load('./models/antique_table/textures/Table_wood_normal.jpeg'),
-						shininess: 70.0,
-//						./threejs-earth/textures/02_earthspec1k.jpg'),
-//						bumpMap: texLoader.load('./threejs-earth/textures/01_earthbump1k.jpg'),
-//						bumpScale: 0.04,
-					});
-*/
                 }
             }
         });
@@ -1472,7 +1412,7 @@ sofaTexture.colorSpace = THREE.SRGBColorSpace;
     (error) => {
         console.error('An error happened loading the antique_table:', error);
     }
-);
+	);
     //
 	// Load Antique Table B (*.glb exported via https://gltf.report/ )
 	//
@@ -1499,7 +1439,7 @@ sofaTexture.colorSpace = THREE.SRGBColorSpace;
     (error) => {
         console.error('An error happened loading the exp antique_table:', error);
     }
-);
+	);
 	//
 	// Load Simple Cessna
 	//
@@ -1527,7 +1467,7 @@ sofaTexture.colorSpace = THREE.SRGBColorSpace;
     (error) => {
         console.error('An error happened loading the Cessna plane:', error);
     }
-);
+	);
 
 	// const furnitureGroup = new THREE.Group();
     // furnitureGroup.add(sofa);
@@ -1557,8 +1497,6 @@ sofaTexture.colorSpace = THREE.SRGBColorSpace;
         // Calculate a 0.0-1.0 progress bar based on time and fadeTime
         // This creates a perfect loop every 'fadeTime' seconds
         var loopProgress = (time % guiObj.fadeTime) / guiObj.fadeTime;
-      
-        // guiObj.subProg = 1;
       
         if (guiObj.animMode === 1) { 
           // Fade Up: 0.0 -> 1.0 (Sawtooth)
@@ -1602,7 +1540,6 @@ sofaTexture.colorSpace = THREE.SRGBColorSpace;
            // hueAccumulator = (hueAccumulator) % 360.0;
            hueAccumulator = 240.0;
         }
-      
         customUniforms.uCurrentHue.value = hueAccumulator;
         // Mirror hue is always 180 degrees opposite
         customUniforms.uMirrorHue.value = (hueAccumulator + 180.0) % 360.0;
@@ -1635,7 +1572,6 @@ sofaTexture.colorSpace = THREE.SRGBColorSpace;
         dripLight.position.set(0, fallY, 0);
 
         // Map PointLight Color (White -> Yellow -> Red)
-		
 		// Sync PointLight Color to match the new shader height threshold
         // let heat = clamp(1.0 - (fallY / 10.0), 0.0, 1.0);
         let heat = clamp((5.0 - fallY) / 5.0, 0.0, 1.0);
@@ -1661,7 +1597,6 @@ sofaTexture.colorSpace = THREE.SRGBColorSpace;
         guiObj.tarX = parseFloat(controls.target.x.toFixed(1));
 		guiObj.tarY = parseFloat(controls.target.y.toFixed(1));
 		guiObj.tarZ = parseFloat(controls.target.z.toFixed(1));
-		/* */
 		
         renderer.render(scene, camera);
     }
