@@ -34,7 +34,7 @@
 <body>
 <div id="envMapProg" class="divStyle">Loading: 0%</div>
 <script type="module">
-    // CDA modified Gem Shadow GIT v3.47.html renamed index.html
+    // CDA modified Gem Shadow GIT v3.48.html renamed index.html
 	// TODO: Add thickness to left and right walls
 	// TODO: SDF blob always in front of red cube, shift cube or remove it?
 	// TODO: 	If blob behind red cube need to render cube last somehow?
@@ -1281,7 +1281,7 @@
 			if (xhr.lengthComputable) {
 
 				const percentComplete = Math.round((xhr.loaded / fileTot) * 100); // fileTot
-				console.log(xhr.loaded + ' of ' + fileTot + ' so ' + percentComplete + '% downloaded');
+				console.log('HDR4k ' + xhr.loaded + ' of ' + fileTot + ' so ' + percentComplete + '% downloaded');
 				progressDiv.innerText = `Loading HDR: ${percentComplete}%`;
 			}
 		},
@@ -1301,7 +1301,7 @@
 			// Progress callback
 			if (xhr.lengthComputable) {
 				const percentComplete = Math.round((xhr.loaded / xhr.total) * 100);
-				console.log(xhr.loaded + ' of ' + xhr.total + ' so ' + percentComplete + '% downloaded');
+				console.log('HDR8k ' + xhr.loaded + ' of ' + xhr.total + ' so ' + percentComplete + '% downloaded');
 				progressDiv.innerText = `Loading HDR: ${percentComplete}%`;
 			}
 		},
@@ -1345,7 +1345,7 @@
 			// Progress callback
 			if (xhr.lengthComputable) {
 				const percentComplete = Math.round((xhr.loaded / xhr.total) * 100);
-				console.log(xhr.loaded + ' of ' + xhr.total + ' so ' + percentComplete + '% downloaded');
+				console.log('sofa ' + xhr.loaded + ' of ' + xhr.total + ' so ' + percentComplete + '% downloaded');
 				progressDiv.innerText = `Loading Sofa: ${percentComplete}%`;
 			}
     },
@@ -1404,7 +1404,7 @@
 			// Progress callback
 			if (xhr.lengthComputable) {
 				const percentComplete = Math.round((xhr.loaded / xhr.total) * 100);
-				console.log(xhr.loaded + ' of ' + xhr.total + ' so ' + percentComplete + '% downloaded');
+				console.log('a_table ' + xhr.loaded + ' of ' + xhr.total + ' so ' + percentComplete + '% downloaded');
 				progressDiv.innerText = `Loading antique_table A : ${percentComplete}%`;
 			}
     },
@@ -1431,7 +1431,7 @@
     (xhr) => {
         if (xhr.lengthComputable) {
 			const percentComplete = Math.round((xhr.loaded / xhr.total) * 100);
-			console.log(xhr.loaded + ' of ' + xhr.total + ' so ' + percentComplete + '% downloaded');
+			console.log('b_table ' + xhr.loaded + ' of ' + xhr.total + ' so ' + percentComplete + '% downloaded');
 			progressDiv.innerText = `Loading antique_table B : ${percentComplete}%`;
 		}
     },
@@ -1459,7 +1459,7 @@
     (xhr) => {
         if (xhr.lengthComputable) {
 			const percentComplete = Math.round((xhr.loaded / xhr.total) * 100);
-			console.log(xhr.loaded + ' of ' + xhr.total + ' so ' + percentComplete + '% downloaded');
+			console.log('a_plane ' + xhr.loaded + ' of ' + xhr.total + ' so ' + percentComplete + '% downloaded');
 			progressDiv.innerText = `Loading cessna_bush_5mb_GLB: ${percentComplete}%`;
 		}
     },
