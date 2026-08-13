@@ -1355,8 +1355,41 @@
     }
 );
 	//
-	// Load Antique Table
+	// Load Antique Table B (*.glb exported via https://gltf.report/ )
 	//
+	
+	gltfLoader.load('./models/antique_table_exp-v1.glb', 
+    (gltf) => {
+        const b_table = gltf.scene; // The actual 3D object is inside the 'scene' property
+        
+		b_table.position.set(-5, 0, 2); // Against left wall
+        // b_table.scale.setScalar(2.5);    // Adjust this if the model is huge or tiny
+		b_table.scale.setX(2.5);    // Adjust X scale 
+		b_table.scale.setY(1.5);    // Adjust Y scale to flatten height 
+		b_table.scale.setZ(2.5);    // Adjust Z scale 
+		b_table.rotation.y = Math.PI / 24; 
+        scene.add(b_table);
+    },
+    (xhr) => {
+        if (xhr.lengthComputable) {
+			const percentComplete = Math.round((xhr.loaded / xhr.total) * 100);
+			console.log('b_table ' + xhr.loaded + ' of ' + xhr.total + ' so ' + percentComplete + '% downloaded');
+			progressDiv.innerText = `Loading antique_table B : ${percentComplete}%`;
+		}
+    },
+	// 3. onError Callback
+    (error) => {
+        console.error('An error happened loading the exp antique_table:', error);
+    }
+	);
+	
+	//
+	// Load Antique Table A
+	//
+	// console.log('THREE.REVISION = ' + THREE.REVISION); 
+	// returns 160 on 13/08/26, 160 > 147 when KHR_materials_pbrSpecularGlossiness depreciated
+	// BUG Depreciated property KHR_materials_pbrSpecularGlossiness 
+
 	const tableTexture = texLoader.load('./models/antique_table/textures/Table_wood_diffuse.jpeg');
     tableTexture.colorSpace = THREE.SRGBColorSpace;
 
@@ -1413,33 +1446,9 @@
         console.error('An error happened loading the antique_table:', error);
     }
 	);
-    //
-	// Load Antique Table B (*.glb exported via https://gltf.report/ )
-	//
-	gltfLoader.load('./models/antique_table_exp-v1.glb', 
-    (gltf) => {
-        const b_table = gltf.scene; // The actual 3D object is inside the 'scene' property
-        
-		b_table.position.set(-5, 0, 2); // Against left wall
-        // b_table.scale.setScalar(2.5);    // Adjust this if the model is huge or tiny
-		b_table.scale.setX(2.5);    // Adjust X scale 
-		b_table.scale.setY(1.5);    // Adjust Y scale to flatten height 
-		b_table.scale.setZ(2.5);    // Adjust Z scale 
-		b_table.rotation.y = Math.PI / 24; 
-        scene.add(b_table);
-    },
-    (xhr) => {
-        if (xhr.lengthComputable) {
-			const percentComplete = Math.round((xhr.loaded / xhr.total) * 100);
-			console.log('b_table ' + xhr.loaded + ' of ' + xhr.total + ' so ' + percentComplete + '% downloaded');
-			progressDiv.innerText = `Loading antique_table B : ${percentComplete}%`;
-		}
-    },
-	// 3. onError Callback
-    (error) => {
-        console.error('An error happened loading the exp antique_table:', error);
-    }
-	);
+	
+	
+	
 	//
 	// Load Simple Cessna
 	//
