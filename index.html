@@ -34,7 +34,7 @@
 <body>
 <div id="envMapProg" class="divStyle">Loading: 0%</div>
 <script type="module">
-    // CDA modified Gem Shadow GIT v3.48.html renamed index.html
+    // CDA modified Gem Shadow GIT v3.49.html renamed index.html
 	// TODO: Add thickness to left and right walls
 	// TODO: SDF blob always in front of red cube, shift cube or remove it?
 	// TODO: 	If blob behind red cube need to render cube last somehow?
@@ -1353,9 +1353,9 @@
     (error) => {
         console.error('An error happened loading the sofa:', error);
     }
-);
+	);
 	//
-	// Load Antique Table B (*.glb exported via https://gltf.report/ )
+	// Load Antique Table B (*.glb exported via https://gltf.report/ ) Appears on the right
 	//
 	
 	gltfLoader.load('./models/antique_table_exp-v1.glb', 
@@ -1368,6 +1368,34 @@
 		b_table.scale.setY(1.5);    // Adjust Y scale to flatten height 
 		b_table.scale.setZ(2.5);    // Adjust Z scale 
 		b_table.rotation.y = Math.PI / 24; 
+		 b_table.traverse((child) => {
+            if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+				// console.log(child.material.name);
+				// FORCE GLASS FIX:
+                // Check if the material is meant to be transparent, or check its name
+                // (You might need to console.log(child.material.name) to find the exact name)
+                if (child.material.transparent || child.material.name.toLowerCase().includes("glass")) {
+                    child.material.transparent = true;
+                    child.material.opacity = 0.3; // Adjust to taste
+                    child.material.roughness = 0.1; // Make it shiny
+                    child.material.metalness = 0.1; 
+                    child.material.depthWrite = false; // CRITICAL: Fixes rendering glitches behind the glass
+                } else {
+                    // 2. THE WOOD FIX
+                    // If it's NOT glass, assume it's the wood frame
+                    // We completely overwrite the broken material with a fresh one
+                    child.material = new THREE.MeshStandardMaterial({
+                        map: tableTexture,  // Apply your manually loaded image
+                        metalnessMap: texLoader.load('./models/antique_table/textures/Table_wood_specularGlossiness.png'),
+                        roughness: 0.5,    // Wood is usually quite rough - suggested .8
+                        metalness: 0.8      // Wood is not metal - suggested 0.0
+                    });
+					console.log('Wood v3 B');
+                }
+            }
+        });
         scene.add(b_table);
     },
     (xhr) => {
@@ -1384,7 +1412,7 @@
 	);
 	
 	//
-	// Load Antique Table A
+	// Load Antique Table A (v2 also using *.glb exported via https://gltf.report/ ) Appears on the left
 	//
 	// console.log('THREE.REVISION = ' + THREE.REVISION); 
 	// returns 160 on 13/08/26, 160 > 147 when KHR_materials_pbrSpecularGlossiness depreciated
@@ -1392,17 +1420,19 @@
 
 	const tableTexture = texLoader.load('./models/antique_table/textures/Table_wood_diffuse.jpeg');
     tableTexture.colorSpace = THREE.SRGBColorSpace;
-
-	gltfLoader.load('./models/antique_table.glb', 
+    
+//	gltfLoader.load('./models/antique_table.glb', 
+//  v2 model
+	gltfLoader.load('./models/antique_table_exp-v1.glb', 
     (gltf) => {
         const a_table = gltf.scene; // The actual 3D object is inside the 'scene' property
 		a_table.position.set(5, 0, 2); // Against right wall
         // a_table.position.set(-5, 0, 2); // Against left wall
-		// a_table.scale.setScalar(2.5);    // Adjust this if the model is huge or tiny
-		 a_table.scale.setX(2.5);    // Adjust X scale 
-		 a_table.scale.setY(1.5);    // Adjust Y scale to flatten height 
-		 a_table.scale.setZ(2.5);    // Adjust Z scale 
-		a_table.rotation.y = - Math.PI / 24; 
+        // a_table.scale.setScalar(2.5);    // Adjust this if the model is huge or tiny
+		a_table.scale.setX(2.5);    // Adjust X scale 
+		a_table.scale.setY(1.5);    // Adjust Y scale to flatten height 
+		a_table.scale.setZ(2.5);    // Adjust Z scale 
+		a_table.rotation.y = - Math.PI / 24; 	
         a_table.traverse((child) => {
             if (child.isMesh) {
                 child.castShadow = true;
@@ -1411,7 +1441,7 @@
 				// FORCE GLASS FIX:
                 // Check if the material is meant to be transparent, or check its name
                 // (You might need to console.log(child.material.name) to find the exact name)
-                 if (child.material.transparent || child.material.name.toLowerCase().includes("glass")) {
+                if (child.material.transparent || child.material.name.toLowerCase().includes("glass")) {
                     child.material.transparent = true;
                     child.material.opacity = 0.3; // Adjust to taste
                     child.material.roughness = 0.1; // Make it shiny
@@ -1433,7 +1463,7 @@
         });
         scene.add(a_table);
     },
-    (xhr) => {			
+    (xhr) => {
 			// Progress callback
 			if (xhr.lengthComputable) {
 				const percentComplete = Math.round((xhr.loaded / xhr.total) * 100);
@@ -1447,7 +1477,7 @@
     }
 	);
 	
-	
+    
 	
 	//
 	// Load Simple Cessna
