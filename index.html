@@ -34,12 +34,13 @@
 <body>
 <div id="envMapProg" class="divStyle">Loading: 0%</div>
 <script type="module">
-    // CDA modified Gem Shadow GIT v3.49.html renamed index.html
+   // CDA modified Gem Shadow GIT v3.50.html renamed index.html
 	// TODO: Add thickness to left and right walls
 	// TODO: SDF blob always in front of red cube, shift cube or remove it?
 	// TODO: 	If blob behind red cube need to render cube last somehow?
 	// TODO: Import models. a) low sofa against left wall b) low coffee table c) wall mounted TV on far wall
 	// TODO:X Load Cessna 3D model plane onto table
+	// TODO: X Use async to Import models. 	
 	// TODO: Create fight path for plane to orbit light in room. Lorrenz attractor?
 	// TODO: Animate plane a) props b) exhaust 
 	// TODO: Animate plane c) basic path d) Advanced path using pitch roll yaw. Quaternions?
@@ -201,9 +202,258 @@
         controls.update(); 
     }
 	
+	// ###################################################################
+
+	// 1. Create a "master" loading function and label it async
+    async function loadAllAssets() {
+	    const pmremGenerator = new THREE.PMREMGenerator(renderer);
+        pmremGenerator.compileEquirectangularShader();
+		let fileTot;
+			/*
+    {
+    // Robot Bobby code  Using a known CORS-friendly space HDR from Poly Haven
+    // rgbeLoader.load('https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/starmap_2020_1k.hdr', (hdr) => {
+    
+	 // RAW method 
+	 // rgbeLoader.load('https://raw.githubusercontent.com/DrZoidbergMD/3JS_Floor/main/resources/HDR_asteroid_field_2k.hdr',  (hdr) => {
+	 // Google Drive method 
+     //	rgbeLoader.load('https://drive.google.com/uc?export=download&id=15lJYiSCl28jI80nFe3iMXVlfLOY-5vvL',  (hdr) => {  // 2k version     8Mb
+	 // Release method, copied link from Releases folder
+     // rgbeLoader.load('https://github.com/DrZoidbergMD/3JS_Floor/releases/download/v0.1/HDR_asteroid_field_2k.hdr',  (hdr) => {  // 2k version    8Mb
+     // rgbeLoader.load('https://github.com/DrZoidbergMD/3JS_Floor/releases/download/v0.2/HDR_asteroid_field_4k.hdr',  (hdr) => {  // 4k version   33Mb
+     // using Pages ?
+     // rgbeLoader.load('https://drzoidbergmd.github.io/3JS_Floor/releases/download/v0.1/Assets/HDR_asteroid_field_2k.hdr',  (hdr) => {  // 8k version    64Mb
+     // rgbeLoader.crossOrigin = null;
+     }
+	 */
+		const rgbeLoader = new RGBELoader();
+        const gltfLoader = new GLTFLoader();
+		
+		let modelName = ' ??? ';
+
+    try {
+		modelName = ' EnvMap ';
+		// let hdr;
+		if (CONFIG.isGitHub) {
+			// Hack to fix loading progress percentage
+			let fileRes = "4k";  // "2k"; "8k";  // File resolutions
+			fileTot = 65687151;              // Full res 8k
+			if (fileRes == "4k") {
+				fileTot = 33554497;      
+			} else if (fileRes == "2k") {
+				fileTot = 8388673;
+			}
+			const hdr = await rgbeLoader.loadAsync('resources/HDR_asteroid_field_4k.hdr', (xhr) => {
+					// Progress callback
+					if (xhr.lengthComputable) {
+						const percentComplete = Math.round((xhr.loaded / fileTot) * 100); // fileTot
+						console.log('HDR4k ' + xhr.loaded + ' of ' + fileTot + ' so ' + percentComplete + '% downloaded');
+						progressDiv.innerText = `Loading HDR4K: ${percentComplete}%`;
+					}
+			});
+			hdr.mapping = THREE.EquirectangularReflectionMapping;
+			scene.background = hdr;
+			scene.environment = hdr;
+			progressDiv.style.display = "none";
+			// Dispose generator to save memory
+			pmremGenerator.dispose();
+		} else {
+			const hdr = await rgbeLoader.loadAsync('HDR_asteroid_field.hdr', (xhr) => {
+					// Progress callback
+					if (xhr.lengthComputable) {
+						const percentComplete = Math.round((xhr.loaded / xhr.total) * 100); 
+						console.log('HDR8k ' + xhr.loaded + ' of ' + xhr.total + ' so ' + percentComplete + '% downloaded');
+						progressDiv.innerText = `Loading HDR8K: ${percentComplete}%`;
+					}
+			});
+			hdr.mapping = THREE.EquirectangularReflectionMapping;
+			scene.background = hdr;
+			scene.environment = hdr;
+			progressDiv.style.display = "none";
+			// Dispose generator to save memory
+			pmremGenerator.dispose();
+		}
+		
+        // --- LOAD SOFA ---
+		const sofaTexture = texLoader.load('./models/modern_sofa_3d_GLTF/textures/material_baseColor3.jpeg');
+		// CRITICAL: Three.js r160 requires this for color textures so they don't look washed out
+		sofaTexture.colorSpace = THREE.SRGBColorSpace;
+		
+        // The code STOPS here until the sofa is fully downloaded
+		modelName = ' Sofa ';
+        const sofaData = await gltfLoader.loadAsync('./models/modern_sofa_3d.glb', (xhr) => {
+            if (xhr.lengthComputable) {
+                const percentComplete = Math.round((xhr.loaded / xhr.total) * 100);
+				console.log('Sofa ' + xhr.loaded + ' of ' + xhr.total + ' so ' + percentComplete + '% downloaded');
+				progressDiv.innerText = `Loading Sofa: ${percentComplete}%`;
+            }
+        });
+        
+        // Once downloaded, this code runs
+        const sofa = sofaData.scene;
+        sofa.position.set(-8.5, -0.2, 2);
+        sofa.scale.setScalar(3.0);
+        sofa.rotation.y = Math.PI / 2;
+		sofa.traverse((child) => {
+            if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+				child.material = new THREE.MeshStandardMaterial({
+                        map: sofaTexture,  // Apply your manually loaded image
+                        roughness: 0.8,    // Wood is usually quite rough
+                        metalness: 0.0     // Wood is not metal
+                });
+            }
+        });
+        scene.add(sofa);
+		
+		// --- LOAD TABLE A ---
+		//
+		{
+		// Load Antique Table A (v2 also using *.glb exported via https://gltf.report/ ) Appears on the left
+		//
+		// console.log('THREE.REVISION = ' + THREE.REVISION); 
+		// returns 160 on 13/08/26, 160 > 147 when KHR_materials_pbrSpecularGlossiness depreciated
+		// BUG Depreciated property KHR_materials_pbrSpecularGlossiness 
+		}
+		modelName = ' Table A ';
+		
+		const tableTexture = texLoader.load('./models/antique_table/textures/Table_wood_diffuse.jpeg');
+		tableTexture.colorSpace = THREE.SRGBColorSpace;
+		
+        // The code STOPS here until Table A is fully downloaded
+        const tableAData = await gltfLoader.loadAsync('./models/antique_table_exp-v1.glb', (xhr) => {
+            if (xhr.lengthComputable) {
+                const percentComplete = Math.round((xhr.loaded / xhr.total) * 100);
+				console.log('a_table ' + xhr.loaded + ' of ' + xhr.total + ' so ' + percentComplete + '% downloaded');
+				progressDiv.innerText = `Loading antique_table A : ${percentComplete}%`;
+            }
+        });
+        
+        const a_table = tableAData.scene;
+        a_table.position.set(5, 0, 2);
+		// a_table.scale.setScalar(2.5);    // Adjust this if the model is huge or tiny
+		a_table.scale.setX(2.5);    // Adjust X scale 
+		a_table.scale.setY(1.5);    // Adjust Y scale to flatten height 
+		a_table.scale.setZ(2.5);    // Adjust Z scale 
+        a_table.rotation.y = - Math.PI / 24;
+		a_table.traverse((child) => {
+			if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+				// console.log(child.material.name);
+				// FORCE GLASS FIX:
+                // Check if the material is meant to be transparent, or check its name
+                // (You might need to console.log(child.material.name) to find the exact name)
+                if (child.material.transparent || child.material.name.toLowerCase().includes("glass")) {
+                    child.material.transparent = true;
+                    child.material.opacity = 0.3; // Adjust to taste
+                    child.material.roughness = 0.1; // Make it shiny
+                    child.material.metalness = 0.1; 
+                    child.material.depthWrite = false; // CRITICAL: Fixes rendering glitches behind the glass
+                } else {
+                    // 2. THE WOOD FIX
+                    // If it's NOT glass, assume it's the wood frame
+                    // We completely overwrite the broken material with a fresh one
+                    child.material = new THREE.MeshStandardMaterial({
+                        map: tableTexture,  // Apply your manually loaded image
+                        metalnessMap: texLoader.load('./models/antique_table/textures/Table_wood_specularGlossiness.png'),
+                        roughness: 0.5,    // Wood is usually quite rough - suggested .8
+                        metalness: 0.8      // Wood is not metal - suggested 0.0
+                    });
+					console.log('Wood v3 A');
+                }
+            }
+        });
+        scene.add(a_table);
+
+        // --- LOAD TABLE B ---
+		modelName = ' Table B ';
+        // The code STOPS here until Table B is fully downloaded
+        const tableBData = await gltfLoader.loadAsync('./models/antique_table_exp-v1.glb', (xhr) => {
+            if (xhr.lengthComputable) {
+                const percentComplete = Math.round((xhr.loaded / xhr.total) * 100);
+				console.log('b_table ' + xhr.loaded + ' of ' + xhr.total + ' so ' + percentComplete + '% downloaded');
+				progressDiv.innerText = `Loading antique_table B : ${percentComplete}%`;
+            }
+        });
+        
+        const b_table = tableBData.scene;
+        b_table.position.set(-5, 0, 2);
+		// b_table.scale.setScalar(2.5);    // Adjust this if the model is huge or tiny
+        b_table.scale.set(2.5, 1.5, 2.5);
+        b_table.rotation.y = Math.PI / 24;
+		b_table.traverse((child) => {
+			if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+				// console.log(child.material.name);
+				// FORCE GLASS FIX:
+                // Check if the material is meant to be transparent, or check its name
+                // (You might need to console.log(child.material.name) to find the exact name)
+                if (child.material.transparent || child.material.name.toLowerCase().includes("glass")) {
+                    child.material.transparent = true;
+                    child.material.opacity = 0.3; // Adjust to taste
+                    child.material.roughness = 0.1; // Make it shiny
+                    child.material.metalness = 0.1; 
+                    child.material.depthWrite = false; // CRITICAL: Fixes rendering glitches behind the glass
+                } else {
+                    // 2. THE WOOD FIX
+                    // If it's NOT glass, assume it's the wood frame
+                    // We completely overwrite the broken material with a fresh one
+                    child.material = new THREE.MeshStandardMaterial({
+                        map: tableTexture,  // Apply your manually loaded image
+                        metalnessMap: texLoader.load('./models/antique_table/textures/Table_wood_specularGlossiness.png'),
+                        roughness: 0.5,    // Wood is usually quite rough - suggested .8
+                        metalness: 0.8      // Wood is not metal - suggested 0.0
+                    });
+					console.log('Wood v3 B');
+                }
+            }
+        });
+        scene.add(b_table);
+
+        // --- LOAD CESSNA ---
+		modelName = ' Cessna Bush ';
+        // The code STOPS here until the Cessna is fully downloaded
+        const cessnaData = await gltfLoader.loadAsync('./models/cessna_bush_5mb_GLB/cessna_180_skywagon_bush_version.glb', (xhr) => {
+            if (xhr.lengthComputable) {
+                const percentComplete = Math.round((xhr.loaded / xhr.total) * 100);
+				console.log('a_plane ' + xhr.loaded + ' of ' + xhr.total + ' so ' + percentComplete + '% downloaded');
+                progressDiv.innerText = `Loading cessna_bush_5mb_GLB: ${percentComplete}%`;
+            }
+        });
+        
+        const a_plane = cessnaData.scene; // The actual 3D object is inside the 'scene' property
+		// a_plane.position.set(-5, 1.018, 2);  // Against left wall cessna_ez_GLB
+        a_plane.position.set(-5.3, 1.138, 2.5); // Against left wall cessna_bush_5mb_GLB
+        a_plane.scale.setScalar(0.08);          // Adjust this if the model is huge or tiny
+        a_plane.rotation.x = -Math.PI / 13;		// wheels flat for cessna_bush_5mb_GLB
+        a_plane.rotation.y = Math.PI / 2.3;
+        scene.add(a_plane);
+
+        // You can keep adding your new Blender wall etc right here...
+		// const furnitureGroup = new THREE.Group();
+		// furnitureGroup.add(sofa);
+		// furnitureGroup.add(a_table);
+		// furnitureGroup.add(b_table);
+		// scene.add(furnitureGroup);
+        
+        // When everything is done, clear the loading screen!
+        progressDiv.innerText = "Loading Complete!";
+        setTimeout(() => progressDiv.style.display = "none", 1000);
+
+    } catch (error) {
+        // If ANY of the downloads fail, the code jumps straight down here
+        console.error("An error occurred while loading asset " + modelName , error);
+        progressDiv.innerText = "Error loading assets.";
+    }
+}
+
+	// ###################################################################
+	
     // --- GUI OBJECT START ---
-    // --- GUI OBJECT START ---
-    // --- GUI OBJECT START ---
+
     const guiObj = {
         subProg: 3,         // 1=Flat, 2=Ripple, 3=Landscape, 4=Splash
         flySpeed: 0.5,		// Landscape only
@@ -321,8 +571,6 @@
 			.catch(err => console.error("Backup failed:", err));
 		}
 	};
-    // --- GUI OBJECT END ---
-    // --- GUI OBJECT END ---
     // --- GUI OBJECT END ---
 	
     const myPrgCntlr = gui.add( guiObj, 'subProg', 1, 4, 1 ).name('Prog (1-4)').listen();
@@ -1240,279 +1488,9 @@
     // Helper for Hue Rotation
     let hueAccumulator = 240.0; // Start Blue
     
-    const pmremGenerator = new THREE.PMREMGenerator(renderer);
-    pmremGenerator.compileEquirectangularShader();
-	let fileTot;
-    {
-    // Robot Bobby code  Using a known CORS-friendly space HDR from Poly Haven
-    // rgbeLoader.load('https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/1k/starmap_2020_1k.hdr', (hdr) => {
-    
-	 // RAW method 
-	 // rgbeLoader.load('https://raw.githubusercontent.com/DrZoidbergMD/3JS_Floor/main/resources/HDR_asteroid_field_2k.hdr',  (hdr) => {
-	 // Google Drive method 
-     //	rgbeLoader.load('https://drive.google.com/uc?export=download&id=15lJYiSCl28jI80nFe3iMXVlfLOY-5vvL',  (hdr) => {  // 2k version     8Mb
-	 // Release method, copied link from Releases folder
-     // rgbeLoader.load('https://github.com/DrZoidbergMD/3JS_Floor/releases/download/v0.1/HDR_asteroid_field_2k.hdr',  (hdr) => {  // 2k version    8Mb
-     // rgbeLoader.load('https://github.com/DrZoidbergMD/3JS_Floor/releases/download/v0.2/HDR_asteroid_field_4k.hdr',  (hdr) => {  // 4k version   33Mb
-     // using Pages ?
-     // rgbeLoader.load('https://drzoidbergmd.github.io/3JS_Floor/releases/download/v0.1/Assets/HDR_asteroid_field_2k.hdr',  (hdr) => {  // 8k version    64Mb
-     // rgbeLoader.crossOrigin = null;
-     }
-	 const rgbeLoader = new RGBELoader();
-	if (CONFIG.isGitHub) {
-		// Hack to fix loading progress percentage
-		let fileRes = "4k";  // "2k"; "8k";  // File resolutions
-		fileTot = 65687151;              // Full res 8k
-		if (fileRes == "4k") {
-			fileTot = 33554497;      
-		} else if (fileRes == "2k") {
-			fileTot = 8388673;
-		}
-		rgbeLoader.load('resources/HDR_asteroid_field_4k.hdr', (hdr) => {
-		hdr.mapping = THREE.EquirectangularReflectionMapping;
-		scene.background = hdr;
-		scene.environment = hdr;
-		progressDiv.style.display = "none";
-		// Dispose generator to save memory
-		pmremGenerator.dispose();
-		}, 
-		(xhr) => {
-			// Progress callback
-			if (xhr.lengthComputable) {
-
-				const percentComplete = Math.round((xhr.loaded / fileTot) * 100); // fileTot
-				console.log('HDR4k ' + xhr.loaded + ' of ' + fileTot + ' so ' + percentComplete + '% downloaded');
-				progressDiv.innerText = `Loading HDR: ${percentComplete}%`;
-			}
-		},
-		(error) => {
-			console.error("An error occurred:", error);
-		});
-	} else {
-		rgbeLoader.load('HDR_asteroid_field.hdr', (hdr) => {
-		hdr.mapping = THREE.EquirectangularReflectionMapping;
-		scene.background = hdr;
-		scene.environment = hdr;
-		progressDiv.style.display = "none";
-		// Dispose generator to save memory
-		pmremGenerator.dispose();
-		}, 
-		(xhr) => {
-			// Progress callback
-			if (xhr.lengthComputable) {
-				const percentComplete = Math.round((xhr.loaded / xhr.total) * 100);
-				console.log('HDR8k ' + xhr.loaded + ' of ' + xhr.total + ' so ' + percentComplete + '% downloaded');
-				progressDiv.innerText = `Loading HDR: ${percentComplete}%`;
-			}
-		},
-		(error) => {
-			console.error("An error occurred:", error);
-		});
-	}
-	//
-	// Load Sofa
-	//
-	const sofaTexture = texLoader.load('./models/modern_sofa_3d_GLTF/textures/material_baseColor3.jpeg');
-	// CRITICAL: Three.js r160 requires this for color textures so they don't look washed out
-	sofaTexture.colorSpace = THREE.SRGBColorSpace;
-	
-	// Initialize the loader once
-	const gltfLoader = new GLTFLoader();
-	gltfLoader.load('./models/modern_sofa_3d.glb', 
-    // 1. onLoad Callback (When it finishes downloading)
-    (gltf) => {
-        const sofa = gltf.scene; // The actual 3D object is inside the 'scene' property
-        // Position and scale it
-        sofa.position.set(-8.5, -0.2, 2); // Against left wall
-        sofa.scale.setScalar(3.0);    // Adjust this if the model is huge or tiny
-		sofa.rotation.y = Math.PI / 2; 
-        // Optional: Loop through the model to enable shadows on all its pieces
-        sofa.traverse((child) => {
-            if (child.isMesh) {
-                child.castShadow = true;
-                child.receiveShadow = true;
-				child.material = new THREE.MeshStandardMaterial({
-                        map: sofaTexture,  // Apply your manually loaded image
-                        roughness: 0.8,    // Wood is usually quite rough
-                        metalness: 0.0     // Wood is not metal
-                });
-            }
-        });
-        scene.add(sofa);
-    },
-    // 2. onProgress Callback (Optional, good for loading screens)
-    (xhr) => {
-			// Progress callback
-			if (xhr.lengthComputable) {
-				const percentComplete = Math.round((xhr.loaded / xhr.total) * 100);
-				console.log('sofa ' + xhr.loaded + ' of ' + xhr.total + ' so ' + percentComplete + '% downloaded');
-				progressDiv.innerText = `Loading Sofa: ${percentComplete}%`;
-			}
-    },
-    // 3. onError Callback
-    (error) => {
-        console.error('An error happened loading the sofa:', error);
-    }
-	);
-	//
-	// Load Antique Table B (*.glb exported via https://gltf.report/ ) Appears on the right
-	//
-	
-	gltfLoader.load('./models/antique_table_exp-v1.glb', 
-    (gltf) => {
-        const b_table = gltf.scene; // The actual 3D object is inside the 'scene' property
-        
-		b_table.position.set(-5, 0, 2); // Against left wall
-        // b_table.scale.setScalar(2.5);    // Adjust this if the model is huge or tiny
-		b_table.scale.setX(2.5);    // Adjust X scale 
-		b_table.scale.setY(1.5);    // Adjust Y scale to flatten height 
-		b_table.scale.setZ(2.5);    // Adjust Z scale 
-		b_table.rotation.y = Math.PI / 24; 
-		 b_table.traverse((child) => {
-            if (child.isMesh) {
-                child.castShadow = true;
-                child.receiveShadow = true;
-				// console.log(child.material.name);
-				// FORCE GLASS FIX:
-                // Check if the material is meant to be transparent, or check its name
-                // (You might need to console.log(child.material.name) to find the exact name)
-                if (child.material.transparent || child.material.name.toLowerCase().includes("glass")) {
-                    child.material.transparent = true;
-                    child.material.opacity = 0.3; // Adjust to taste
-                    child.material.roughness = 0.1; // Make it shiny
-                    child.material.metalness = 0.1; 
-                    child.material.depthWrite = false; // CRITICAL: Fixes rendering glitches behind the glass
-                } else {
-                    // 2. THE WOOD FIX
-                    // If it's NOT glass, assume it's the wood frame
-                    // We completely overwrite the broken material with a fresh one
-                    child.material = new THREE.MeshStandardMaterial({
-                        map: tableTexture,  // Apply your manually loaded image
-                        metalnessMap: texLoader.load('./models/antique_table/textures/Table_wood_specularGlossiness.png'),
-                        roughness: 0.5,    // Wood is usually quite rough - suggested .8
-                        metalness: 0.8      // Wood is not metal - suggested 0.0
-                    });
-					console.log('Wood v3 B');
-                }
-            }
-        });
-        scene.add(b_table);
-    },
-    (xhr) => {
-        if (xhr.lengthComputable) {
-			const percentComplete = Math.round((xhr.loaded / xhr.total) * 100);
-			console.log('b_table ' + xhr.loaded + ' of ' + xhr.total + ' so ' + percentComplete + '% downloaded');
-			progressDiv.innerText = `Loading antique_table B : ${percentComplete}%`;
-		}
-    },
-	// 3. onError Callback
-    (error) => {
-        console.error('An error happened loading the exp antique_table:', error);
-    }
-	);
-	
-	//
-	// Load Antique Table A (v2 also using *.glb exported via https://gltf.report/ ) Appears on the left
-	//
-	// console.log('THREE.REVISION = ' + THREE.REVISION); 
-	// returns 160 on 13/08/26, 160 > 147 when KHR_materials_pbrSpecularGlossiness depreciated
-	// BUG Depreciated property KHR_materials_pbrSpecularGlossiness 
-
-	const tableTexture = texLoader.load('./models/antique_table/textures/Table_wood_diffuse.jpeg');
-    tableTexture.colorSpace = THREE.SRGBColorSpace;
-    
-//	gltfLoader.load('./models/antique_table.glb', 
-//  v2 model
-	gltfLoader.load('./models/antique_table_exp-v1.glb', 
-    (gltf) => {
-        const a_table = gltf.scene; // The actual 3D object is inside the 'scene' property
-		a_table.position.set(5, 0, 2); // Against right wall
-        // a_table.position.set(-5, 0, 2); // Against left wall
-        // a_table.scale.setScalar(2.5);    // Adjust this if the model is huge or tiny
-		a_table.scale.setX(2.5);    // Adjust X scale 
-		a_table.scale.setY(1.5);    // Adjust Y scale to flatten height 
-		a_table.scale.setZ(2.5);    // Adjust Z scale 
-		a_table.rotation.y = - Math.PI / 24; 	
-        a_table.traverse((child) => {
-            if (child.isMesh) {
-                child.castShadow = true;
-                child.receiveShadow = true;
-				// console.log(child.material.name);
-				// FORCE GLASS FIX:
-                // Check if the material is meant to be transparent, or check its name
-                // (You might need to console.log(child.material.name) to find the exact name)
-                if (child.material.transparent || child.material.name.toLowerCase().includes("glass")) {
-                    child.material.transparent = true;
-                    child.material.opacity = 0.3; // Adjust to taste
-                    child.material.roughness = 0.1; // Make it shiny
-                    child.material.metalness = 0.1; 
-                    child.material.depthWrite = false; // CRITICAL: Fixes rendering glitches behind the glass
-                } else {
-                    // 2. THE WOOD FIX
-                    // If it's NOT glass, assume it's the wood frame
-                    // We completely overwrite the broken material with a fresh one
-                    child.material = new THREE.MeshStandardMaterial({
-                        map: tableTexture,  // Apply your manually loaded image
-                        metalnessMap: texLoader.load('./models/antique_table/textures/Table_wood_specularGlossiness.png'),
-                        roughness: 0.5,    // Wood is usually quite rough - suggested .8
-                        metalness: 0.8      // Wood is not metal - suggested 0.0
-                    });
-					console.log('Wood v3 A');
-                }
-            }
-        });
-        scene.add(a_table);
-    },
-    (xhr) => {
-			// Progress callback
-			if (xhr.lengthComputable) {
-				const percentComplete = Math.round((xhr.loaded / xhr.total) * 100);
-				console.log('a_table ' + xhr.loaded + ' of ' + xhr.total + ' so ' + percentComplete + '% downloaded');
-				progressDiv.innerText = `Loading antique_table A : ${percentComplete}%`;
-			}
-    },
-	// 3. onError Callback
-    (error) => {
-        console.error('An error happened loading the antique_table:', error);
-    }
-	);
-	
-    
-	
-	//
-	// Load Simple Cessna
-	//
-	// const planeTexture = texLoader.load('./models/antique_table/textures/Table_wood_diffuse.jpeg');
-    // planeTexture.colorSpace = THREE.SRGBColorSpace;
-//	gltfLoader.load('./models/cessna_ez_GLB/cessna_172.glb', 
- 	gltfLoader.load('./models/cessna_bush_5mb_GLB/cessna_180_skywagon_bush_version.glb', 
-    (gltf) => {
-        const a_plane = gltf.scene; // The actual 3D object is inside the 'scene' property
-        // a_plane.position.set(-5, 1.018, 2); // Against left wall cessna_ez_GLB
-		a_plane.position.set(-5.3, 1.138, 2.5); // Against left wall cessna_bush_5mb_GLB
-        a_plane.scale.setScalar(0.08);    // Adjust this if the model is huge or tiny
-		a_plane.rotation.x = - Math.PI / 13; // wheels flat for cessna_bush_5mb_GLB
-		a_plane.rotation.y = Math.PI / 2.3; 
-        scene.add(a_plane);
-    },
-    (xhr) => {
-        if (xhr.lengthComputable) {
-			const percentComplete = Math.round((xhr.loaded / xhr.total) * 100);
-			console.log('a_plane ' + xhr.loaded + ' of ' + xhr.total + ' so ' + percentComplete + '% downloaded');
-			progressDiv.innerText = `Loading cessna_bush_5mb_GLB: ${percentComplete}%`;
-		}
-    },
-	// 3. onError Callback
-    (error) => {
-        console.error('An error happened loading the Cessna plane:', error);
-    }
-	);
-
-	// const furnitureGroup = new THREE.Group();
-    // furnitureGroup.add(sofa);
-    // furnitureGroup.add(a_table);
-    // scene.add(furnitureGroup);
-    
+	    // 2. Kick off the async load function
+    loadAllAssets();
+ 
 	// Note: The clamp function might not be defined natively in pure JS in your scope,
     // so you can add this helper outside your animate loop:
     const clamp = (num, min, max) => Math.min(Math.max(num, min), max);
