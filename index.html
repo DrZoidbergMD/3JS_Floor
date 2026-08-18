@@ -34,17 +34,18 @@
 <body>
 <div id="envMapProg" class="divStyle">Loading: 0%</div>
 <script type="module">
-   // CDA modified Gem Shadow GIT v3.50.html renamed index.html
+   // CDA modified Gem Shadow GIT v3.51.html renamed index.html
 	// TODO: Add thickness to left and right walls
 	// TODO: SDF blob always in front of red cube, shift cube or remove it?
 	// TODO: 	If blob behind red cube need to render cube last somehow?
 	// TODO: Import models. a) low sofa against left wall b) low coffee table c) wall mounted TV on far wall
-	// TODO:X Load Cessna 3D model plane onto table
-	// TODO: X Use async to Import models. 	
+	// TODO: X Load Cessna 3D model plane onto table
+	// TODO: X Use async to Import models. 
+	// TODO: X Import right wall from Blender
 	// TODO: Create fight path for plane to orbit light in room. Lorrenz attractor?
 	// TODO: Animate plane a) props b) exhaust 
 	// TODO: Animate plane c) basic path d) Advanced path using pitch roll yaw. Quaternions?
-	
+
     import * as THREE from 'three';
     import { OrbitControls } from 'OrbitControls';
     import GUI from 'lil-gui';
@@ -52,6 +53,7 @@
 //    import { EXRLoader } from 'EXRLoader';
     import { RGBELoader } from 'RGBELoader';
 	import { GLTFLoader } from 'jsm/loaders/GLTFLoader.js';
+	import { DRACOLoader } from 'jsm/loaders/DRACOLoader.js';
     
  	// --- ENVIRONMENT TOGGLE ---
 	const CONFIG = {
@@ -226,8 +228,17 @@
      // rgbeLoader.crossOrigin = null;
      }
 	 */
+	 
+	 	// 1. Initialize the Draco loader
+        const dracoLoader = new DRACOLoader();
+        // Tell it where the decoder worker files are hosted (usually a public folder in your project)
+        dracoLoader.setDecoderPath('https://www.gstatic.com/draco/versioned/decoders/1.5.6/'); 
+        // Alternatively, if you host them locally: dracoLoader.setDecoderPath('./js/libs/draco/');
+		
 		const rgbeLoader = new RGBELoader();
         const gltfLoader = new GLTFLoader();
+		// 2. Attach Draco to your GLTFLoader instance
+        gltfLoader.setDRACOLoader(dracoLoader);
 		
 		let modelName = ' ??? ';
 
@@ -275,20 +286,20 @@
 		}
 		
         // --- LOAD SOFA ---
-		const sofaTexture = texLoader.load('./models/modern_sofa_3d_GLTF/textures/material_baseColor3.jpeg');
+		const sofaTexture = texLoader.load('./models/modern_sofa_3d_GLTF/textures/material_baseColor3_1k.jpeg');
 		// CRITICAL: Three.js r160 requires this for color textures so they don't look washed out
 		sofaTexture.colorSpace = THREE.SRGBColorSpace;
 		
         // The code STOPS here until the sofa is fully downloaded
 		modelName = ' Sofa ';
-        const sofaData = await gltfLoader.loadAsync('./models/modern_sofa_3d.glb', (xhr) => {
+        const sofaData = await gltfLoader.loadAsync('./models/modern_sofa_3d_exp-v1.glb', (xhr) => {
             if (xhr.lengthComputable) {
                 const percentComplete = Math.round((xhr.loaded / xhr.total) * 100);
 				console.log('Sofa ' + xhr.loaded + ' of ' + xhr.total + ' so ' + percentComplete + '% downloaded');
 				progressDiv.innerText = `Loading Sofa: ${percentComplete}%`;
             }
         });
-        
+
         // Once downloaded, this code runs
         const sofa = sofaData.scene;
         sofa.position.set(-8.5, -0.2, 2);
@@ -318,11 +329,11 @@
 		}
 		modelName = ' Table A ';
 		
-		const tableTexture = texLoader.load('./models/antique_table/textures/Table_wood_diffuse.jpeg');
-		tableTexture.colorSpace = THREE.SRGBColorSpace;
+		// const tableTexture = texLoader.load('./models/antique_table/textures/Table_wood_diffuse.jpeg');
+		// tableTexture.colorSpace = THREE.SRGBColorSpace;
 		
         // The code STOPS here until Table A is fully downloaded
-        const tableAData = await gltfLoader.loadAsync('./models/antique_table_exp-v1.glb', (xhr) => {
+        const tableAData = await gltfLoader.loadAsync('./models/antique_table_exp-v2.glb', (xhr) => {
             if (xhr.lengthComputable) {
                 const percentComplete = Math.round((xhr.loaded / xhr.total) * 100);
 				console.log('a_table ' + xhr.loaded + ' of ' + xhr.total + ' so ' + percentComplete + '% downloaded');
@@ -351,6 +362,7 @@
                     child.material.roughness = 0.1; // Make it shiny
                     child.material.metalness = 0.1; 
                     child.material.depthWrite = false; // CRITICAL: Fixes rendering glitches behind the glass
+				/*
                 } else {
                     // 2. THE WOOD FIX
                     // If it's NOT glass, assume it's the wood frame
@@ -361,6 +373,7 @@
                         roughness: 0.5,    // Wood is usually quite rough - suggested .8
                         metalness: 0.8      // Wood is not metal - suggested 0.0
                     });
+				*/
 					console.log('Wood v3 A');
                 }
             }
@@ -370,7 +383,7 @@
         // --- LOAD TABLE B ---
 		modelName = ' Table B ';
         // The code STOPS here until Table B is fully downloaded
-        const tableBData = await gltfLoader.loadAsync('./models/antique_table_exp-v1.glb', (xhr) => {
+        const tableBData = await gltfLoader.loadAsync('./models/antique_table_exp-v2.glb', (xhr) => {
             if (xhr.lengthComputable) {
                 const percentComplete = Math.round((xhr.loaded / xhr.total) * 100);
 				console.log('b_table ' + xhr.loaded + ' of ' + xhr.total + ' so ' + percentComplete + '% downloaded');
@@ -391,12 +404,14 @@
 				// FORCE GLASS FIX:
                 // Check if the material is meant to be transparent, or check its name
                 // (You might need to console.log(child.material.name) to find the exact name)
+		
                 if (child.material.transparent || child.material.name.toLowerCase().includes("glass")) {
                     child.material.transparent = true;
                     child.material.opacity = 0.3; // Adjust to taste
                     child.material.roughness = 0.1; // Make it shiny
                     child.material.metalness = 0.1; 
                     child.material.depthWrite = false; // CRITICAL: Fixes rendering glitches behind the glass
+				/*
                 } else {
                     // 2. THE WOOD FIX
                     // If it's NOT glass, assume it's the wood frame
@@ -407,10 +422,12 @@
                         roughness: 0.5,    // Wood is usually quite rough - suggested .8
                         metalness: 0.8      // Wood is not metal - suggested 0.0
                     });
+				*/
 					console.log('Wood v3 B');
                 }
             }
         });
+		
         scene.add(b_table);
 
         // --- LOAD CESSNA ---
@@ -439,9 +456,38 @@
 		// furnitureGroup.add(b_table);
 		// scene.add(furnitureGroup);
         
+        // --- LOAD Right Wall  ---
+		modelName = ' Right Wall ';
+        // The code STOPS here until the right wall is fully downloaded
+        const rWallData = await gltfLoader.loadAsync('./models/right_wall/right_wall_v6.glb', (xhr) => {
+            if (xhr.lengthComputable) {
+                const percentComplete = Math.round((xhr.loaded / xhr.total) * 100);
+				console.log('R Wall ' + xhr.loaded + ' of ' + xhr.total + ' so ' + percentComplete + '% downloaded');
+                progressDiv.innerText = `Loading right_wall_v3 GLB: ${percentComplete}%`;
+            }
+        });
+        
+        const r_wall = rWallData.scene; // The actual 3D object is inside the 'scene' property
+        r_wall.position.set(0, 0, 0); // Against right wall 
+        // r_wall.scale.setScalar(0.85);          // Adjust this if the model is huge or tiny
+		r_wall.scale.set(4, 2, 1);
+
+        r_wall.rotation.y = Math.PI / 2;
+        r_wall.rotation.z = Math.PI / 2;
+		r_wall.rotation.x = -Math.PI ;
+		r_wall.rotation.z = Math.PI;
+		
+		// for model v3 
+		// r_wall.position.set(r_wall.position.x-9.4, r_wall.position.y-.15, r_wall.position.z+14.0); // Against right wall 
+        r_wall.position.set(r_wall.position.x-9.4, r_wall.position.y-.15, r_wall.position.z+36.0); // Against right wall 
+
+        scene.add(r_wall);
+
+
+        
         // When everything is done, clear the loading screen!
         progressDiv.innerText = "Loading Complete!";
-        setTimeout(() => progressDiv.style.display = "none", 1000);
+//        setTimeout(() => progressDiv.style.display = "none", 1000);
 
     } catch (error) {
         // If ANY of the downloads fail, the code jumps straight down here
@@ -1199,12 +1245,13 @@
 	scene.add(leftWall);
 
 	// --- RIGHT WALL (With Window) ---
+	/*
 	const rightWall = new THREE.Mesh(wallGeo, windowWallMat);
 	rightWall.receiveShadow = true; // rightWall.castShadow = true; 
 	rightWall.rotation.y = -Math.PI / 2; // Rotate -90 degrees
 	rightWall.position.set(10, 5, 0);    // Push right 10, up 5
 	scene.add(rightWall);
-
+	*/
 	// --- CEILING ---
 	const ceiling = new THREE.Mesh(ceilingGeo, solidCeilingMat);
 	ceiling.receiveShadow = true; // ceiling.castShadow = true; 
