@@ -265,7 +265,6 @@
 			hdr.mapping = THREE.EquirectangularReflectionMapping;
 			scene.background = hdr;
 			scene.environment = hdr;
-			progressDiv.style.display = "none";
 			// Dispose generator to save memory
 			pmremGenerator.dispose();
 		} else {
@@ -280,7 +279,6 @@
 			hdr.mapping = THREE.EquirectangularReflectionMapping;
 			scene.background = hdr;
 			scene.environment = hdr;
-			progressDiv.style.display = "none";
 			// Dispose generator to save memory
 			pmremGenerator.dispose();
 		}
@@ -459,7 +457,7 @@
         // --- LOAD Right Wall  ---
 		modelName = ' Right Wall ';
         // The code STOPS here until the right wall is fully downloaded
-        const rWallData = await gltfLoader.loadAsync('./models/right_wall/right_wall_v6.glb', (xhr) => {
+        const rWallData = await gltfLoader.loadAsync('./models/right_wall/right_wall_v7.glb', (xhr) => {
             if (xhr.lengthComputable) {
                 const percentComplete = Math.round((xhr.loaded / xhr.total) * 100);
 				console.log('R Wall ' + xhr.loaded + ' of ' + xhr.total + ' so ' + percentComplete + '% downloaded');
@@ -483,11 +481,9 @@
 
         scene.add(r_wall);
 
-
-        
         // When everything is done, clear the loading screen!
         progressDiv.innerText = "Loading Complete!";
-//        setTimeout(() => progressDiv.style.display = "none", 1000);
+        setTimeout(() => progressDiv.style.display = "none", 2000);
 
     } catch (error) {
         // If ANY of the downloads fail, the code jumps straight down here
