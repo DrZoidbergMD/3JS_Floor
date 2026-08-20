@@ -492,11 +492,11 @@
         // --- LOAD Left Wall  ---
 		modelName = ' Left Wall ';
         // The code STOPS here until the left wall is fully downloaded
-        const lWallData = await gltfLoader.loadAsync('./models/left_wall/left_wall_v1forkA4.glb', (xhr) => {
+        const lWallData = await gltfLoader.loadAsync('./models/left_wall/left_wall_v2.glb', (xhr) => {
             if (xhr.lengthComputable) {
                 const percentComplete = Math.round((xhr.loaded / xhr.total) * 100);
 				console.log('L Wall ' + xhr.loaded + ' of ' + xhr.total + ' so ' + percentComplete + '% downloaded');
-                progressDiv.innerText = `Loading left_wall_v1forkA4 GLB: ${percentComplete}%`;
+                progressDiv.innerText = `Loading left_wall_v2 GLB: ${percentComplete}%`;
             }
         });
         
