@@ -34,7 +34,7 @@
 <body>
 <div id="envMapProg" class="divStyle">Loading: 0%</div>
 <script type="module">
-   // CDA modified Gem Shadow GIT v3.51.html renamed index.html
+   // CDA modified Gem Shadow GIT v3.52.html renamed index.html
 	// TODO: Add thickness to left and right walls
 	// TODO: SDF blob always in front of red cube, shift cube or remove it?
 	// TODO: 	If blob behind red cube need to render cube last somehow?
@@ -461,7 +461,7 @@
             if (xhr.lengthComputable) {
                 const percentComplete = Math.round((xhr.loaded / xhr.total) * 100);
 				console.log('R Wall ' + xhr.loaded + ' of ' + xhr.total + ' so ' + percentComplete + '% downloaded');
-                progressDiv.innerText = `Loading right_wall_v3 GLB: ${percentComplete}%`;
+                progressDiv.innerText = `Loading right_wall_v7 GLB: ${percentComplete}%`;
             }
         });
         
@@ -478,9 +478,50 @@
 		// for model v3 
 		// r_wall.position.set(r_wall.position.x-9.4, r_wall.position.y-.15, r_wall.position.z+14.0); // Against right wall 
         r_wall.position.set(r_wall.position.x-9.4, r_wall.position.y-.15, r_wall.position.z+36.0); // Against right wall 
-
+		
+		r_wall.traverse((child) => {
+			if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+            }
+        });
+		console.log('Right Wall');
+		
         scene.add(r_wall);
+		
+        // --- LOAD Left Wall  ---
+		modelName = ' Left Wall ';
+        // The code STOPS here until the left wall is fully downloaded
+        const lWallData = await gltfLoader.loadAsync('./models/left_wall/left_wall_v1forkA4.glb', (xhr) => {
+            if (xhr.lengthComputable) {
+                const percentComplete = Math.round((xhr.loaded / xhr.total) * 100);
+				console.log('L Wall ' + xhr.loaded + ' of ' + xhr.total + ' so ' + percentComplete + '% downloaded');
+                progressDiv.innerText = `Loading left_wall_v1forkA4 GLB: ${percentComplete}%`;
+            }
+        });
+        
+		const l_wall = lWallData.scene; 	// The actual 3D object is inside the 'scene' property
+        l_wall.position.set(0, 0, 0); 		// Against left wall 
+        // l_wall.scale.setScalar(0.85);    // Adjust this if the model is huge or tiny
+		l_wall.scale.set(1.98, 1.02, 1);
 
+        l_wall.rotation.y = Math.PI / 2;
+        l_wall.rotation.z = Math.PI / 2;
+		l_wall.rotation.x = -Math.PI ;
+		l_wall.rotation.z = Math.PI;
+		
+        l_wall.position.set(l_wall.position.x-32.9, l_wall.position.y-.15, l_wall.position.z+10.0); // Against left wall 
+
+		l_wall.traverse((child) => {
+			if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+            }
+        });
+		console.log('Left Wall');
+
+        scene.add(l_wall);
+		
         // When everything is done, clear the loading screen!
         progressDiv.innerText = "Loading Complete!";
         setTimeout(() => progressDiv.style.display = "none", 2000);
@@ -1234,11 +1275,13 @@
 	scene.add(backWall);
 
 	// --- LEFT WALL (With Window) ---
+	/*
 	const leftWall = new THREE.Mesh(wallGeo, leftWallMat);
 	leftWall.receiveShadow = true; // leftWall.castShadow = true; 
 	leftWall.rotation.y = Math.PI / 2; // Rotate 90 degrees
 	leftWall.position.set(-10, 5, 0);  // Push left 10, up 5
 	scene.add(leftWall);
+	*/
 
 	// --- RIGHT WALL (With Window) ---
 	/*
