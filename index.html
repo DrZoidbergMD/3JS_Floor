@@ -34,7 +34,7 @@
 <body>
 <div id="envMapProg" class="divStyle">Loading: 0%</div>
 <script type="module">
-   // CDA modified Gem Shadow GIT v3.52.html renamed index.html
+    // CDA modified Gem Shadow  GIT v3.53.html renamed index.html
 	// TODO: Add thickness to left and right walls
 	// TODO: SDF blob always in front of red cube, shift cube or remove it?
 	// TODO: 	If blob behind red cube need to render cube last somehow?
@@ -42,8 +42,8 @@
 	// TODO: X Load Cessna 3D model plane onto table
 	// TODO: X Use async to Import models. 
 	// TODO: X Import right wall from Blender
-	// TODO: Create fight path for plane to orbit light in room. Lorrenz attractor?
 	// TODO: Animate plane a) props b) exhaust 
+	// TODO: Create fight path for plane to orbit light in room. Lorrenz attractor?
 	// TODO: Animate plane c) basic path d) Advanced path using pitch roll yaw. Quaternions?
 
     import * as THREE from 'three';
@@ -431,7 +431,8 @@
         // --- LOAD CESSNA ---
 		modelName = ' Cessna Bush ';
         // The code STOPS here until the Cessna is fully downloaded
-        const cessnaData = await gltfLoader.loadAsync('./models/cessna_bush_5mb_GLB/cessna_180_skywagon_bush_version.glb', (xhr) => {
+//        const cessnaData = await gltfLoader.loadAsync('./models/cessna_bush_5mb_GLB/cessna_180_skywagon_bush_version.glb', (xhr) => {
+        const cessnaData = await gltfLoader.loadAsync('./models/cessna_bush_5mb_GLB/cessna_bush_5mb_blender_CDA2.glb', (xhr) => {
             if (xhr.lengthComputable) {
                 const percentComplete = Math.round((xhr.loaded / xhr.total) * 100);
 				console.log('a_plane ' + xhr.loaded + ' of ' + xhr.total + ' so ' + percentComplete + '% downloaded');
